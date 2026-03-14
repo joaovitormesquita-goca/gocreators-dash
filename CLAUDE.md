@@ -60,6 +60,41 @@ Cada métrica tem dois recortes: **total** (acumulado) e **recentes** (anúncios
 - Sem score ou ranking automático no MVP
 - Sem listagem de criativos individuais na tela do creator no MVP
 
+## Supabase — Declarative Schemas
+
+Gerenciamento do banco usa **declarative schemas** — nunca criar migration files manualmente.
+
+### Fluxo
+
+1. Declarar o estado desejado em arquivos `.sql` dentro de `supabase/schemas/`
+2. Gerar migration automaticamente: `supabase db diff -f <nome>`
+3. Aplicar localmente: `supabase migration up`
+4. Deploy em produção: `supabase db push`
+
+### Estrutura
+
+```
+supabase/
+├── schemas/        # Estado declarado (editamos aqui)
+│   ├── creators.sql
+│   ├── brands.sql
+│   ├── ad_accounts.sql
+│   ├── creator_brands.sql
+│   ├── creatives.sql
+│   └── ad_metrics.sql
+└── migrations/     # Gerado automaticamente — não editar manualmente
+```
+
+### Limitações do diff
+
+Não rastreados pelo `supabase db diff`: DML (INSERT/UPDATE/DELETE), RLS policies, comments, materialized views, partitions. Como o projeto não usa RLS por perfil, isso não impacta o MVP.
+
+### Regras
+
+- Sempre adicionar novas colunas ao final das tabelas para evitar diffs confusos
+- Nunca resetar uma versão já deployada em produção — reverter via novo schema + novo diff
+- Configurar ordem de execução em `config.toml` via `[db.migrations] schema_paths` quando houver dependências entre tabelas
+
 ## Linguagem
 
 O código e commits devem ser em **inglês**. A documentação do projeto e comunicação são em **português (BR)**.
