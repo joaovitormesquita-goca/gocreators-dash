@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arquitetura — Plataforma UGC Creators</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --border: #2a2d35;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --purple: #a78bfa;
+    --purple-dim: #2d2142;
+    --teal: #2dd4bf;
+    --teal-dim: #0f2e2a;
+    --blue: #60a5fa;
+    --blue-dim: #0f1f3a;
+    --amber: #fbbf24;
+    --amber-dim: #2e1f06;
+    --coral: #fb7185;
+    --coral-dim: #2e0f17;
+    --gray-dim: #1e2025;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 48px 32px;
+    gap: 0;
+  }
+
+  header {
+    width: 100%;
+    max-width: 760px;
+    margin-bottom: 40px;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+  }
+
+  .diagram {
+    width: 100%;
+    max-width: 760px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .layer {
+    border-radius: 10px;
+    padding: 18px 24px;
+    border: 1px solid;
+    position: relative;
+  }
+
+  .layer-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .layer-desc {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  .layer-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+    margin-top: 6px;
+    border: 1px solid;
+    letter-spacing: 0.04em;
+  }
+
+  /* layer colors */
+  .l-purple { background: var(--purple-dim); border-color: #4c3a7a; }
+  .l-purple .layer-label { color: var(--purple); }
+  .l-purple .layer-tag { color: var(--purple); border-color: #4c3a7a; background: #1f1535; }
+
+  .l-teal { background: var(--teal-dim); border-color: #174f47; }
+  .l-teal .layer-label { color: var(--teal); }
+  .l-teal .layer-tag { color: var(--teal); border-color: #174f47; background: #0a201e; }
+
+  .l-blue { background: var(--blue-dim); border-color: #1a3a6a; }
+  .l-blue .layer-label { color: var(--blue); }
+  .l-blue .layer-tag { color: var(--blue); border-color: #1a3a6a; background: #0a1628; }
+
+  .l-amber { background: var(--amber-dim); border-color: #5c3d0a; }
+  .l-amber .layer-label { color: var(--amber); }
+  .l-amber .layer-tag { color: var(--amber); border-color: #5c3d0a; background: #1e1505; }
+
+  .l-coral { background: var(--coral-dim); border-color: #5c1a2a; }
+  .l-coral .layer-label { color: var(--coral); }
+  .l-coral .layer-tag { color: var(--coral); border-color: #5c1a2a; background: #1e0910; }
+
+  .l-gray { background: var(--gray-dim); border-color: var(--border); }
+  .l-gray .layer-label { color: #9ca3af; }
+  .l-gray .layer-tag { color: #9ca3af; border-color: var(--border); background: #12141a; }
+
+  /* connector */
+  .connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    position: relative;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    gap: 8px;
+  }
+
+  .connector::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+    transform: translateX(-50%);
+  }
+
+  .connector span {
+    background: var(--bg);
+    padding: 0 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* two-col row */
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0 4px;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    border-top: 1px dashed var(--border);
+  }
+
+  /* badge top-right */
+  .badge {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+
+  footer {
+    margin-top: 40px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-align: center;
+    max-width: 760px;
+  }
+
+  /* animate in */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .layer, .row, .divider {
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .layer:nth-child(1)  { animation-delay: 0.05s; }
+  .layer:nth-child(2)  { animation-delay: 0.10s; }
+  .row                 { animation-delay: 0.20s; }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Elicitação de arquitetura · UGC Platform</p>
+  <h1>Plataforma de gerenciamento<br>de UGC Creators — Meta Ads</h1>
+  <p class="subtitle">Stack tecnológica e camadas do sistema · uso interno · time pequeno</p>
+</header>
+
+<div class="diagram">
+
+  <!-- Frontend -->
+  <div class="layer l-purple">
+    <span class="badge">Camada 1</span>
+    <div class="layer-label">Frontend</div>
+    <div class="layer-desc">Interface do gestor de tráfego e acompanhadores de creators</div>
+    <div>
+      <span class="layer-tag">Next.js 14 App Router</span>
+      <span class="layer-tag">Tailwind CSS</span>
+      <span class="layer-tag">shadcn/ui</span>
+      <span class="layer-tag">Recharts / Chart.js</span>
+    </div>
+  </div>
+
+  <div class="connector"><span>Server Actions · API Routes</span></div>
+
+  <!-- Backend BFF -->
+  <div class="layer l-teal">
+    <span class="badge">Camada 2</span>
+    <div class="layer-label">Backend / BFF</div>
+    <div class="layer-desc">Lógica de negócio, autenticação e orquestração de dados</div>
+    <div>
+      <span class="layer-tag">Next.js Server Actions</span>
+      <span class="layer-tag">Supabase Auth</span>
+      <span class="layer-tag">Perfil único</span>
+    </div>
+  </div>
+
+  <div class="connector"><span>Supabase client · ETL scheduler</span></div>
+
+  <!-- Supabase + Pipeline -->
+  <div class="row">
+    <div class="layer l-blue">
+      <span class="badge">Dados</span>
+      <div class="layer-label">Supabase</div>
+      <div class="layer-desc">Banco principal da plataforma</div>
+      <div>
+        <span class="layer-tag">PostgreSQL</span>
+        <span class="layer-tag">Row Level Security</span>
+        <span class="layer-tag">Auth</span>
+        <span class="layer-tag">Storage (criativos)</span>
+        <span class="layer-tag">Edge Functions</span>
+      </div>
+    </div>
+
+    <div class="layer l-amber">
+      <span class="badge">ETL</span>
+      <div class="layer-label">Pipeline de dados</div>
+      <div class="layer-desc">Sincronização com Meta Ads DB</div>
+      <div>
+        <span class="layer-tag">Metabase API</span>
+        <span class="layer-tag">Agendamento</span>
+        <span class="layer-tag">Idempotente</span>
+        <span class="layer-tag">Normalização creator/marca</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider">Integrações externas</div>
+
+  <!-- Externos -->
+  <div class="row">
+    <div class="layer l-coral">
+      <span class="badge">Origem</span>
+      <div class="layer-label">Meta Ads DB</div>
+      <div class="layer-desc">Banco existente consultado via Metabase API</div>
+      <div>
+        <span class="layer-tag">CTR · CPM · CPC</span>
+        <span class="layer-tag">ROAS · Conversões</span>
+        <span class="layer-tag">Hook Rate · TSR</span>
+      </div>
+    </div>
+
+    <div class="layer l-gray">
+      <span class="badge">Alertas</span>
+      <div class="layer-label">Notificações</div>
+      <div class="layer-desc">Alertas de falha no ETL e relatórios</div>
+      <div>
+        <span class="layer-tag">Email</span>
+        <span class="layer-tag">Slack</span>
+        <span class="layer-tag">Log de sync</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Plataforma interna · Next.js + Supabase · Dados via Metabase API · 2025
+</footer>
+
+</body>
+</html>
