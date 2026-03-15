@@ -1,7 +1,27 @@
 # Próximos passos — Issues planejadas
 
 **Data:** 2026-03-15
+**Repo:** `joaovitormesquita-goca/gocreators-dash`
 **Total de issues:** 8
+
+> **Para agentes/Claude Code:** As issues completas estão no GitHub. Para puxar a descrição de qualquer issue, use:
+> ```bash
+> gh issue view <número> --json title,body,labels,state
+> ```
+> Para listar todas: `gh issue list --state open --json number,title,url`
+
+## Índice de issues
+
+| # | Issue | Link |
+|---|-------|------|
+| 1 | Tela de gerenciamento de marcas com ad accounts | [#1](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/1) |
+| 2 | Agendamento diário do ETL (antes das 6h) | [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) |
+| 3 | Tabela e tela de histórico de sincronização | [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) |
+| 4 | Nova tabela e ETL de gasto total diário por ad account | [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) |
+| 5 | Renomear dashboard de Creators para Tabela Mensal | [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) |
+| 6 | Visão Mensal com gráficos de gasto e share % | [#6](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/6) |
+| 7 | Visão Diária com gráfico de gasto e share % | [#7](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/7) |
+| 8 | Tela de dados individuais por creator (draft) | [#8](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/8) |
 
 ---
 
@@ -37,7 +57,7 @@ Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e de
 
 ## Issues
 
-### #1 — Tela de gerenciamento de marcas com ad accounts
+### [#1](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/1) — Tela de gerenciamento de marcas com ad accounts
 
 **Labels:** `frontend`, `backend`, `enhancement`
 **Dependências:** nenhuma
@@ -68,7 +88,7 @@ Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e de
 
 ---
 
-### #2 — Agendamento diário do ETL (antes das 6h)
+### [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) — Agendamento diário do ETL (antes das 6h)
 
 **Labels:** `etl`, `backend`, `enhancement`
 **Dependências:** #3 (para registrar execuções no histórico)
@@ -89,7 +109,7 @@ Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e de
 
 ---
 
-### #3 — Tabela e tela de histórico de sincronização
+### [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) — Tabela e tela de histórico de sincronização
 
 **Labels:** `etl`, `frontend`, `backend`, `enhancement`
 **Dependências:** nenhuma
@@ -125,7 +145,7 @@ Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e de
 
 ---
 
-### #4 — Nova tabela e ETL de gasto total diário por ad account
+### [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) — Nova tabela e ETL de gasto total diário por ad account
 
 **Labels:** `etl`, `backend`, `enhancement`
 **Dependências:** nenhuma (mas bloqueia #6 e #7)
@@ -155,7 +175,7 @@ Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e de
 
 ---
 
-### #5 — Renomear dashboard de Creators para Tabela Mensal
+### [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) — Renomear dashboard de Creators para Tabela Mensal
 
 **Labels:** `frontend`, `enhancement`
 **Dependências:** nenhuma (mas fazer antes de #6 e #7)
@@ -174,7 +194,7 @@ Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e de
 
 ---
 
-### #6 — Visão Mensal com gráficos de gasto e share %
+### [#6](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/6) — Visão Mensal com gráficos de gasto e share %
 
 **Labels:** `dashboard`, `frontend`, `backend`, `enhancement`
 **Dependências:** #4 (gasto total por ad account), #5 (reorganização da navegação)
@@ -212,7 +232,7 @@ Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e de
 
 ---
 
-### #7 — Visão Diária com gráfico de gasto e share %
+### [#7](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/7) — Visão Diária com gráfico de gasto e share %
 
 **Labels:** `dashboard`, `frontend`, `backend`, `enhancement`
 **Dependências:** #4 (gasto total por ad account), #5 (reorganização da navegação)
@@ -244,7 +264,7 @@ Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e de
 
 ---
 
-### #8 — Tela de dados individuais por creator (draft)
+### [#8](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/8) — Tela de dados individuais por creator (draft)
 
 **Labels:** `dashboard`, `frontend`, `draft`
 **Dependências:** nenhuma por agora
