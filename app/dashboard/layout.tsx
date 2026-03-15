@@ -12,9 +12,17 @@ export default function DashboardLayout({
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-border/40">
         <div className="container flex h-14 items-center justify-between px-4 md:px-6">
-          <Link href="/dashboard/creators" className="font-semibold text-lg">
-            GoCreators
-          </Link>
+          <nav className="flex items-center gap-6">
+            <Link href="/dashboard/creators" className="font-semibold text-lg">
+              GoCreators
+            </Link>
+            <Link
+              href="/dashboard/creators/list"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Creators
+            </Link>
+          </nav>
           <div className="flex items-center gap-3">
             <ThemeSwitcher />
             <Suspense>
