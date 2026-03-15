@@ -1,6 +1,6 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { Users, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -21,6 +21,11 @@ const navItems = [
     title: "Creators",
     href: "/dashboard/creators",
     icon: Users,
+  },
+  {
+    title: "Gerenciar Creators",
+    href: "/dashboard/creators/list",
+    icon: UserPlus,
   },
 ];
 
@@ -52,7 +57,11 @@ export function AppSidebar({ user }: { user: { email: string } | null }) {
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton
                   asChild
-                  isActive={pathname.startsWith(item.href)}
+                  isActive={
+                    item.href === "/dashboard/creators"
+                      ? pathname === "/dashboard/creators"
+                      : pathname.startsWith(item.href)
+                  }
                   tooltip={item.title}
                 >
                   <Link href={item.href}>
