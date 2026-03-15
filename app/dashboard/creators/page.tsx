@@ -1,5 +1,6 @@
 import { getBrands, getCreatorMetrics } from "./actions";
 import { CreatorsTable } from "@/components/creators-table";
+import { SyncButton } from "@/components/sync-button";
 
 export default async function CreatorsPage({
   searchParams,
@@ -18,7 +19,10 @@ export default async function CreatorsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Creators</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">Creators</h1>
+        <SyncButton />
+      </div>
       <CreatorsTable
         brands={brands}
         initialBrandId={selectedBrandId}

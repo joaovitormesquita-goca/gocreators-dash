@@ -24,6 +24,17 @@ export type CreatorMetric = {
   ctr_recentes: number;
 };
 
+export async function syncAdMetrics() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.functions.invoke("sync-ad-metrics");
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  return { success: true as const, results: data };
+}
+
 export async function getCreatorMetrics(
   brandId: number,
 ): Promise<CreatorMetric[]> {
