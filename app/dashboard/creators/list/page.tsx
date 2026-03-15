@@ -17,7 +17,7 @@ export default async function CreatorsListPage() {
         <h1 className="text-2xl font-bold tracking-tight">Creators</h1>
         <CreateCreatorDialog brands={brands} />
       </div>
-      <CreatorsListTable creators={creators} />
+      <CreatorsListTable creators={creators} brands={brands} />
     </div>
   );
 }

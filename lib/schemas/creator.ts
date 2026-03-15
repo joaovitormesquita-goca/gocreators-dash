@@ -15,3 +15,21 @@ export const createCreatorSchema = z.object({
 });
 
 export type CreateCreatorInput = z.infer<typeof createCreatorSchema>;
+
+export const editBrandAssignmentSchema = z.object({
+  assignmentId: z.number().optional(),
+  brandId: z.string().min(1, "Selecione uma marca"),
+  handles: z.string().min(1, "Informe ao menos um handle"),
+  startDate: z.date({ error: "Selecione a data de início" }),
+});
+
+export const editCreatorSchema = z.object({
+  creatorId: z.number(),
+  fullName: z.string().min(1, "Nome é obrigatório").max(200),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  brandAssignments: z
+    .array(editBrandAssignmentSchema)
+    .min(1, "Vincule ao menos uma marca"),
+});
+
+export type EditCreatorInput = z.infer<typeof editCreatorSchema>;

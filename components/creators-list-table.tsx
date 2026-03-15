@@ -10,19 +10,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ArrowDown, ArrowUp, ArrowUpDown, Pencil } from "lucide-react";
+import { EditCreatorDialog } from "@/components/edit-creator-dialog";
 import type { CreatorWithBrands } from "@/app/dashboard/creators/list/actions";
 
+type Brand = { id: number; name: string };
 type SortKey = "full_name" | "email";
 type SortDir = "asc" | "desc";
 
 export function CreatorsListTable({
   creators,
+  brands,
 }: {
   creators: CreatorWithBrands[];
+  brands: Brand[];
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("full_name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [editingCreator, setEditingCreator] =
+    useState<CreatorWithBrands | null>(null);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -53,64 +60,91 @@ export function CreatorsListTable({
   }
 
   return (
-    <div className="rounded-md border overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead
-              className="cursor-pointer select-none whitespace-nowrap"
-              onClick={() => handleSort("full_name")}
-            >
-              Nome
-              <SortIcon column="full_name" />
-            </TableHead>
-            <TableHead
-              className="cursor-pointer select-none whitespace-nowrap"
-              onClick={() => handleSort("email")}
-            >
-              Email
-              <SortIcon column="email" />
-            </TableHead>
-            <TableHead className="whitespace-nowrap">Marcas</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sorted.length === 0 ? (
+    <>
+      <div className="rounded-md border overflow-x-auto">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell
-                colSpan={3}
-                className="text-center text-muted-foreground py-8"
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => handleSort("full_name")}
               >
-                Nenhum creator cadastrado.
-              </TableCell>
+                Nome
+                <SortIcon column="full_name" />
+              </TableHead>
+              <TableHead
+                className="cursor-pointer select-none whitespace-nowrap"
+                onClick={() => handleSort("email")}
+              >
+                Email
+                <SortIcon column="email" />
+              </TableHead>
+              <TableHead className="whitespace-nowrap">Marcas</TableHead>
+              <TableHead className="whitespace-nowrap w-[70px]">
+                Ações
+              </TableHead>
             </TableRow>
-          ) : (
-            sorted.map((creator) => (
-              <TableRow key={creator.id}>
-                <TableCell className="whitespace-nowrap font-medium">
-                  {creator.full_name}
-                </TableCell>
-                <TableCell className="whitespace-nowrap">
-                  {creator.email || "-"}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {creator.brands.length === 0 ? (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    ) : (
-                      creator.brands.map((brand) => (
-                        <Badge key={brand.id} variant="secondary">
-                          {brand.name}
-                        </Badge>
-                      ))
-                    )}
-                  </div>
+          </TableHeader>
+          <TableBody>
+            {sorted.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={4}
+                  className="text-center text-muted-foreground py-8"
+                >
+                  Nenhum creator cadastrado.
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+            ) : (
+              sorted.map((creator) => (
+                <TableRow key={creator.id}>
+                  <TableCell className="whitespace-nowrap font-medium">
+                    {creator.full_name}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {creator.email || "-"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {creator.brands.length === 0 ? (
+                        <span className="text-muted-foreground text-sm">
+                          -
+                        </span>
+                      ) : (
+                        creator.brands.map((brand) => (
+                          <Badge key={brand.assignmentId} variant="secondary">
+                            {brand.name}
+                          </Badge>
+                        ))
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingCreator(creator)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {editingCreator && (
+        <EditCreatorDialog
+          creator={editingCreator}
+          brands={brands}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setEditingCreator(null);
+          }}
+        />
+      )}
+    </>
   );
 }

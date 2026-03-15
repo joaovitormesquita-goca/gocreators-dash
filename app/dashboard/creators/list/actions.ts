@@ -2,10 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createCreatorSchema, type CreateCreatorInput } from "@/lib/schemas/creator";
+import {
+  createCreatorSchema,
+  editCreatorSchema,
+  type CreateCreatorInput,
+  type EditCreatorInput,
+} from "@/lib/schemas/creator";
 
 export type CreatorBrand = {
   id: number;
+  assignmentId: number;
   name: string;
   handles: string[];
   start_date: string | null;
@@ -49,6 +55,7 @@ export async function getCreatorsWithBrands(): Promise<CreatorWithBrands[]> {
       const brand = cb.brands as { id: number; name: string } | null;
       return {
         id: brand?.id ?? 0,
+        assignmentId: cb.id as number,
         name: brand?.name ?? "",
         handles: (cb.handles as string[]) ?? [],
         start_date: cb.start_date as string | null,
@@ -70,6 +77,10 @@ export async function getBrandsForSelect() {
 
 type ActionResult =
   | { success: true; creatorId: number }
+  | { success: false; error: string };
+
+type UpdateResult =
+  | { success: true }
   | { success: false; error: string };
 
 export async function createCreatorWithBrands(
@@ -116,4 +127,94 @@ export async function createCreatorWithBrands(
 
   revalidatePath("/dashboard/creators/list");
   return { success: true, creatorId: creator.id };
+}
+
+export async function updateCreator(
+  input: EditCreatorInput,
+): Promise<UpdateResult> {
+  const parsed = editCreatorSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const { creatorId, fullName, email, brandAssignments } = parsed.data;
+  const supabase = await createClient();
+
+  // Update creator info
+  const { error: creatorError } = await supabase
+    .from("creators")
+    .update({ full_name: fullName, email: email || null })
+    .eq("id", creatorId);
+
+  if (creatorError) {
+    return { success: false, error: creatorError.message };
+  }
+
+  // Fetch current assignments to compute diff
+  const { data: currentAssignments, error: fetchError } = await supabase
+    .from("creator_brands")
+    .select("id")
+    .eq("creator_id", creatorId);
+
+  if (fetchError) {
+    return { success: false, error: fetchError.message };
+  }
+
+  const currentIds = new Set((currentAssignments ?? []).map((a) => a.id));
+  const submittedIds = new Set(
+    brandAssignments
+      .filter((ba) => ba.assignmentId !== undefined)
+      .map((ba) => ba.assignmentId!),
+  );
+
+  // Delete removed assignments
+  const toDelete = [...currentIds].filter((id) => !submittedIds.has(id));
+  if (toDelete.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("creator_brands")
+      .delete()
+      .in("id", toDelete);
+
+    if (deleteError) {
+      return { success: false, error: deleteError.message };
+    }
+  }
+
+  // Update existing assignments
+  for (const ba of brandAssignments.filter((ba) => ba.assignmentId !== undefined)) {
+    const { error: updateError } = await supabase
+      .from("creator_brands")
+      .update({
+        handles: ba.handles.split(",").map((h) => h.trim()).filter(Boolean),
+        start_date: ba.startDate.toISOString().split("T")[0],
+      })
+      .eq("id", ba.assignmentId!);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+  }
+
+  // Insert new assignments
+  const toInsert = brandAssignments
+    .filter((ba) => ba.assignmentId === undefined)
+    .map((ba) => ({
+      creator_id: creatorId,
+      brand_id: Number(ba.brandId),
+      handles: ba.handles.split(",").map((h) => h.trim()).filter(Boolean),
+      start_date: ba.startDate.toISOString().split("T")[0],
+    }));
+
+  if (toInsert.length > 0) {
+    const { error: insertError } = await supabase
+      .from("creator_brands")
+      .insert(toInsert);
+
+    if (insertError) {
+      return { success: false, error: insertError.message };
+    }
+  }
+
+  revalidatePath("/dashboard/creators/list");
+  return { success: true };
 }
