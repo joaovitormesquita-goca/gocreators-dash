@@ -95,6 +95,16 @@ Não rastreados pelo `supabase db diff`: DML (INSERT/UPDATE/DELETE), RLS policie
 - Nunca resetar uma versão já deployada em produção — reverter via novo schema + novo diff
 - Configurar ordem de execução em `config.toml` via `[db.migrations] schema_paths` quando houver dependências entre tabelas
 
+## Teste local
+
+Usuário de teste para login via Chrome DevTools MCP ou testes manuais:
+
+- **URL:** `http://localhost:3000/auth/login`
+- **Email:** `teste@gocreators.com`
+- **Senha:** `teste123456`
+
+Criado via Supabase Auth API no ambiente local. Não usar INSERT direto em `auth.users` — sempre usar a API (`/auth/v1/signup`) para que `auth.identities` seja populado corretamente.
+
 ## Linguagem
 
 O código e commits devem ser em **inglês**. A documentação do projeto e comunicação são em **português (BR)**.

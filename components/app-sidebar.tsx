@@ -4,7 +4,7 @@ import { Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { ThemeSwitcher } from "@/components/theme-switcher";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -24,22 +24,26 @@ const navItems = [
   },
 ];
 
-export function AppSidebar({
-  authButton,
-}: {
-  authButton: React.ReactNode;
-}) {
+export function AppSidebar({ user }: { user: { email: string } | null }) {
   const pathname = usePathname();
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
-        <Link
-          href="/dashboard/creators"
-          className="flex items-center gap-2 px-2 py-1 font-semibold text-lg"
-        >
-          GoCreators
-        </Link>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" asChild>
+              <Link href="/dashboard/creators">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  <span className="text-sm font-bold">G</span>
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">GoCreators</span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -62,10 +66,17 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <div className="flex items-center gap-2">
-          <ThemeSwitcher />
-        </div>
-        {authButton}
+        {user ? (
+          <NavUser user={user} />
+        ) : (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/auth/login">Sign in</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
