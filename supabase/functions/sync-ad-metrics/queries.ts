@@ -27,3 +27,16 @@ WHERE account_id = '${escapeSQL(metaAccountId)}'
 GROUP BY ad_id, ad_name, created_time, date_start::date
   `.trim();
 }
+
+export function buildAccountSpendQuery(metaAccountId: string): string {
+  return `
+SELECT
+  account_id,
+  date_start::date AS date,
+  SUM(COALESCE(spend, 0)) AS spend
+FROM raw.gogroup_ads_metrics
+WHERE account_id = '${escapeSQL(metaAccountId)}'
+  AND date_start >= CURRENT_DATE - INTERVAL '7 days'
+GROUP BY account_id, date_start::date
+  `.trim();
+}

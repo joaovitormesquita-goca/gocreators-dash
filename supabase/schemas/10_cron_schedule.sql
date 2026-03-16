@@ -1,0 +1,23 @@
+-- Cron schedule for daily ETL sync
+-- Configured via Supabase Dashboard SQL Editor (secrets not versionable)
+--
+-- Prerequisites (enable in Dashboard > Database > Extensions):
+--   create extension if not exists pg_cron with schema extensions;
+--   create extension if not exists pg_net with schema extensions;
+--
+-- Schedule (run in SQL Editor with actual secrets):
+--
+-- select cron.schedule(
+--   'daily-sync-ad-metrics',
+--   '0 8 * * *',  -- 08:00 UTC = 05:00 BRT
+--   $$
+--   select net.http_post(
+--     url := '<SUPABASE_URL>/functions/v1/sync-ad-metrics',
+--     headers := '{"Content-Type": "application/json", "Authorization": "Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
+--     body := '{"trigger": "scheduled"}'::jsonb
+--   );
+--   $$
+-- );
+--
+-- To verify: select * from cron.job;
+-- To remove: select cron.unschedule('daily-sync-ad-metrics');

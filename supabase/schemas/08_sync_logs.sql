@@ -9,5 +9,6 @@ create table if not exists "public"."sync_logs" (
   "creatives_upserted" integer not null default 0,
   "metrics_upserted" integer not null default 0,
   "unmatched_ads" integer not null default 0,
-  "error_message" text
+  "error_message" text,
+  "account_spend_upserted" integer not null default 0
 );

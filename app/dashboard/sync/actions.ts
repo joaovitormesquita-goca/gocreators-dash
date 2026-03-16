@@ -11,6 +11,7 @@ export type SyncLog = {
   creatives_upserted: number;
   metrics_upserted: number;
   unmatched_ads: number;
+  account_spend_upserted: number;
   error_message: string | null;
 };
 

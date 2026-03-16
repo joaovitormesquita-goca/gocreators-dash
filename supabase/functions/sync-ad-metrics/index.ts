@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { MetabaseClient } from "./metabase-client.ts";
 import { matchCreatorBrand } from "./handle-matcher.ts";
-import { buildMetabaseQuery } from "./queries.ts";
+import { buildMetabaseQuery, buildAccountSpendQuery } from "./queries.ts";
 import type { AdAccount, CreatorBrand, MetabaseRow, SyncResult } from "./types.ts";
 
 Deno.serve(async (_req: Request) => {
@@ -76,24 +76,34 @@ Deno.serve(async (_req: Request) => {
     // Process each ad account sequentially
     for (const account of adAccounts as AdAccount[]) {
       const brandCreatorBrands = brandHandlesMap.get(account.brand_id);
-      if (!brandCreatorBrands || brandCreatorBrands.length === 0) {
-        results.push({
-          account_id: account.meta_account_id,
-          status: "success",
-          creatives_upserted: 0,
-          metrics_upserted: 0,
-          unmatched_ads: 0,
-        });
-        continue;
-      }
 
       try {
+        // Sync account daily spend (for ALL accounts, needed for share % calculation)
+        const accountSpendUpserted = await syncAccountDailySpend(
+          supabase,
+          metabase,
+          account,
+        );
+
+        if (!brandCreatorBrands || brandCreatorBrands.length === 0) {
+          results.push({
+            account_id: account.meta_account_id,
+            status: "success",
+            creatives_upserted: 0,
+            metrics_upserted: 0,
+            unmatched_ads: 0,
+            account_spend_upserted: accountSpendUpserted,
+          });
+          continue;
+        }
+
         const result = await processAdAccount(
           supabase,
           metabase,
           account,
           brandCreatorBrands,
         );
+        result.account_spend_upserted = accountSpendUpserted;
         results.push(result);
       } catch (err) {
         console.error(`Error processing account ${account.meta_account_id}:`, err);
@@ -103,6 +113,7 @@ Deno.serve(async (_req: Request) => {
           creatives_upserted: 0,
           metrics_upserted: 0,
           unmatched_ads: 0,
+          account_spend_upserted: 0,
           error: err instanceof Error ? err.message : String(err),
         });
       }
@@ -115,8 +126,15 @@ Deno.serve(async (_req: Request) => {
           creatives_upserted: acc.creatives_upserted + r.creatives_upserted,
           metrics_upserted: acc.metrics_upserted + r.metrics_upserted,
           unmatched_ads: acc.unmatched_ads + r.unmatched_ads,
+          account_spend_upserted:
+            acc.account_spend_upserted + r.account_spend_upserted,
         }),
-        { creatives_upserted: 0, metrics_upserted: 0, unmatched_ads: 0 },
+        {
+          creatives_upserted: 0,
+          metrics_upserted: 0,
+          unmatched_ads: 0,
+          account_spend_upserted: 0,
+        },
       );
 
       const errors = results
@@ -180,6 +198,7 @@ async function processAdAccount(
       creatives_upserted: 0,
       metrics_upserted: 0,
       unmatched_ads: 0,
+      account_spend_upserted: 0,
     };
   }
 
@@ -306,5 +325,40 @@ async function processAdAccount(
     creatives_upserted: creativeIdMap.size,
     metrics_upserted: metricsUpserted,
     unmatched_ads: unmatchedCount,
+    account_spend_upserted: 0,
   };
+}
+
+async function syncAccountDailySpend(
+  supabase: ReturnType<typeof createClient>,
+  metabase: MetabaseClient,
+  account: AdAccount,
+): Promise<number> {
+  const sql = buildAccountSpendQuery(account.meta_account_id);
+  const rows = await metabase.executeRawQuery(sql);
+
+  if (rows.length === 0) return 0;
+
+  const spendData = rows.map((row) => ({
+    ad_account_id: account.id,
+    date: String(row.date),
+    spend: Number(row.spend) || 0,
+  }));
+
+  const { error } = await supabase
+    .from("ad_account_daily_spend")
+    .upsert(spendData, {
+      onConflict: "ad_account_id,date",
+      ignoreDuplicates: false,
+    });
+
+  if (error) {
+    console.error(
+      `Failed to upsert account daily spend for ${account.meta_account_id}:`,
+      error,
+    );
+    return 0;
+  }
+
+  return spendData.length;
 }
