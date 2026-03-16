@@ -5,7 +5,13 @@ import { buildMetabaseQuery } from "./queries.ts";
 import type { AdAccount, CreatorBrand, MetabaseRow, SyncResult } from "./types.ts";
 
 Deno.serve(async (_req: Request) => {
+  let syncLogId: string | null = null;
+  let supabase: ReturnType<typeof createClient> | null = null;
+
   try {
+    // Parse request body for trigger type
+    const body = await _req.json().catch(() => ({}));
+    const trigger = body.trigger === "scheduled" ? "scheduled" : "manual";
     const metabaseUrl = Deno.env.get("METABASE_URL");
     const metabaseUsername = Deno.env.get("METABASE_USERNAME");
     const metabasePassword = Deno.env.get("METABASE_PASSWORD");
@@ -27,7 +33,15 @@ Deno.serve(async (_req: Request) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // Create sync log entry
+    const { data: logRow } = await supabase
+      .from("sync_logs")
+      .insert({ status: "running", trigger })
+      .select("id")
+      .single();
+    syncLogId = logRow?.id ?? null;
 
     const metabase = new MetabaseClient(
       metabaseUrl,
@@ -94,10 +108,49 @@ Deno.serve(async (_req: Request) => {
       }
     }
 
+    // Update sync log with final results
+    if (syncLogId && supabase) {
+      const totals = results.reduce(
+        (acc, r) => ({
+          creatives_upserted: acc.creatives_upserted + r.creatives_upserted,
+          metrics_upserted: acc.metrics_upserted + r.metrics_upserted,
+          unmatched_ads: acc.unmatched_ads + r.unmatched_ads,
+        }),
+        { creatives_upserted: 0, metrics_upserted: 0, unmatched_ads: 0 },
+      );
+
+      const errors = results
+        .filter((r) => r.error)
+        .map((r) => `${r.account_id}: ${r.error}`);
+      const hasErrors = errors.length > 0;
+
+      await supabase
+        .from("sync_logs")
+        .update({
+          finished_at: new Date().toISOString(),
+          status: hasErrors ? "error" : "success",
+          ...totals,
+          error_message: hasErrors ? errors.join("; ") : null,
+        })
+        .eq("id", syncLogId);
+    }
+
     return new Response(JSON.stringify({ results }), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
+    // Update sync log with error status
+    if (syncLogId && supabase) {
+      await supabase
+        .from("sync_logs")
+        .update({
+          finished_at: new Date().toISOString(),
+          status: "error",
+          error_message: err instanceof Error ? err.message : String(err),
+        })
+        .eq("id", syncLogId);
+    }
+
     return new Response(
       JSON.stringify({
         error: err instanceof Error ? err.message : String(err),

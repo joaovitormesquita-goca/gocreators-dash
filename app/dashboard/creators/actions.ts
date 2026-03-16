@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export async function getBrands() {
@@ -26,12 +27,15 @@ export type CreatorMetric = {
 
 export async function syncAdMetrics() {
   const supabase = await createClient();
-  const { data, error } = await supabase.functions.invoke("sync-ad-metrics");
+  const { data, error } = await supabase.functions.invoke("sync-ad-metrics", {
+    body: { trigger: "manual" },
+  });
 
   if (error) {
     return { success: false as const, error: error.message };
   }
 
+  revalidatePath("/dashboard/sync");
   return { success: true as const, results: data };
 }
 

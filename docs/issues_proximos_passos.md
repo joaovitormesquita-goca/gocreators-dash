@@ -1,8 +1,8 @@
 # Próximos passos — Issues planejadas
 
-**Data:** 2026-03-15
+**Última atualização:** 2026-03-15
 **Repo:** `joaovitormesquita-goca/gocreators-dash`
-**Total de issues:** 8
+**Total de issues:** 8 | **Concluídas:** 1/8 (12,5%)
 
 > **Para agentes/Claude Code:** As issues completas estão no GitHub. Para puxar a descrição de qualquer issue, use:
 > ```bash
@@ -12,23 +12,23 @@
 
 ## Índice de issues
 
-| # | Issue | Link |
-|---|-------|------|
-| 1 | Tela de gerenciamento de marcas com ad accounts | [#1](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/1) |
-| 2 | Agendamento diário do ETL (antes das 6h) | [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) |
-| 3 | Tabela e tela de histórico de sincronização | [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) |
-| 4 | Nova tabela e ETL de gasto total diário por ad account | [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) |
-| 5 | Renomear dashboard de Creators para Tabela Mensal | [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) |
-| 6 | Visão Mensal com gráficos de gasto e share % | [#6](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/6) |
-| 7 | Visão Diária com gráfico de gasto e share % | [#7](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/7) |
-| 8 | Tela de dados individuais por creator (draft) | [#8](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/8) |
+| # | Issue | Status | Link |
+|---|-------|--------|------|
+| 1 | Tela de gerenciamento de marcas com ad accounts | ✅ Concluída | [#1](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/1) |
+| 2 | Agendamento diário do ETL (antes das 6h) | ⬚ Pendente | [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) |
+| 3 | Tabela e tela de histórico de sincronização | ⬚ Pendente | [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) |
+| 4 | Nova tabela e ETL de gasto total diário por ad account | ⬚ Pendente | [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) |
+| 5 | Renomear dashboard de Creators para Tabela Mensal | ⬚ Pendente | [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) |
+| 6 | Visão Mensal com gráficos de gasto e share % | ⬚ Pendente | [#6](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/6) |
+| 7 | Visão Diária com gráfico de gasto e share % | ⬚ Pendente | [#7](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/7) |
+| 8 | Tela de dados individuais por creator (draft) | 🟡 Draft | [#8](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/8) |
 
 ---
 
 ## Mapa de dependências
 
 ```
-#1 Marcas/Ad Accounts ──────────────────────── (independente)
+#1 Marcas/Ad Accounts ──────────────────────── ✅ CONCLUÍDA
 
 #2 Agendamento ETL ─────────┐
                              ├── complementares (#2 registra na tabela que #3 cria)
@@ -47,44 +47,50 @@
 
 | Trilha | Issues | Ordem |
 |--------|--------|-------|
-| **A — Gestão** | #1 | Independente |
+| **A — Gestão** | ~~#1~~ ✅ | Concluída |
 | **B — ETL/Sync** | #3 → #2 → #4 | #3 cria `sync_logs` e atualiza Edge Function, #2 agenda, #4 expande ETL |
 | **C — Dashboards** | #5 → #6 → #7 | #5 reorganiza navegação, #6 e #7 dependem de #4 |
 
-Trilhas A e B podem começar em paralelo. Trilha C começa com #5 (rápida) e depende de #4 (trilha B) para #6 e #7.
+Trilha A está concluída. Trilha B pode começar imediatamente. Trilha C começa com #5 (rápida) e depende de #4 (trilha B) para #6 e #7.
+
+## Próximas prioridades
+
+Com a issue #1 concluída, as próximas issues recomendadas são:
+
+1. **#3 — Histórico de Sync** (desbloqueia #2) — criar tabela `sync_logs` e atualizar Edge Function
+2. **#5 — Renomear para Tabela Mensal** (rápida, independente) — reorganizar navegação
+3. **#2 — Agendamento ETL** (depende de #3) — configurar cron
+4. **#4 — Gasto total por ad account** (desbloqueia #6 e #7) — nova tabela + ETL
+5. **#6 e #7 — Visões com gráficos** (dependem de #4 e #5) — dashboards Recharts
 
 ---
 
 ## Issues
 
-### [#1](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/1) — Tela de gerenciamento de marcas com ad accounts
+### [#1](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/1) — ✅ Tela de gerenciamento de marcas com ad accounts
 
 **Labels:** `frontend`, `backend`, `enhancement`
 **Dependências:** nenhuma
+**Status:** Concluída (PR [#9](https://github.com/joaovitormesquita-goca/gocreators-dash/pull/9))
 
 **Contexto:** Marcas e ad accounts existem no banco mas não têm interface de gestão.
 
-**Requisitos:**
-- Página `/dashboard/brands`
-- Listagem de marcas com expansão para ver ad accounts vinculadas (`meta_account_id`)
-- CRUD de marcas: criar, editar, remover (dialog)
-- CRUD de ad accounts dentro de cada marca: criar, editar, desvincular (inline ou dialog)
-- Validação com Zod
-- Server actions seguindo padrão de `/dashboard/creators/list`
-
-**Referência:**
-- UI: `CreateCreatorDialog`, `EditCreatorDialog`
-- Server actions: `/app/dashboard/creators/list/actions.ts`
-- Schemas: `supabase/schemas/brands.sql`, `supabase/schemas/ad_accounts.sql`
+**O que foi implementado:**
+- Página `/dashboard/brands` com tabela expansível (marcas → ad accounts)
+- CRUD completo de marcas: `CreateBrandDialog`, `EditBrandDialog`, `DeleteConfirmDialog`
+- CRUD completo de ad accounts: `CreateAdAccountDialog`, `EditAdAccountDialog`
+- Server actions em `app/dashboard/brands/actions.ts`
+- Validação com Zod em `lib/schemas/brand`
+- Link "Marcas" adicionado ao sidebar
 
 **Critérios de aceite:**
-- [ ] Listar marcas com suas ad accounts
-- [ ] Criar nova marca
-- [ ] Editar marca existente
-- [ ] Remover marca (com confirmação)
-- [ ] Adicionar ad account a uma marca
-- [ ] Editar ad account
-- [ ] Remover ad account de uma marca
+- [x] Listar marcas com suas ad accounts
+- [x] Criar nova marca
+- [x] Editar marca existente
+- [x] Remover marca (com confirmação)
+- [x] Adicionar ad account a uma marca
+- [x] Editar ad account
+- [x] Remover ad account de uma marca
 
 ---
 
