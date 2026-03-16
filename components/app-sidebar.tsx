@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, Building2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -26,6 +26,11 @@ const navItems = [
     title: "Gerenciar Creators",
     href: "/dashboard/creators/list",
     icon: UserPlus,
+  },
+  {
+    title: "Marcas",
+    href: "/dashboard/brands",
+    icon: Building2,
   },
 ];
 
