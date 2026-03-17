@@ -11,7 +11,7 @@ Plataforma interna para gestores de tráfego e acompanhadores de creators monito
 - **Framework:** Next.js 14 com App Router (template `with-supabase`)
 - **UI:** Tailwind CSS + shadcn/ui
 - **Gráficos:** Recharts
-- **Backend:** Next.js Server Actions + API Routes
+- **Backend:** Next.js Server Actions (sem API Routes custom — Edge Functions só para ETL)
 - **Auth:** Supabase Auth — perfil único, sem diferenciação de papéis (todos os usuários autenticados têm acesso total)
 - **Banco:** Supabase (PostgreSQL) — sem Row Level Security por perfil
 - **ETL:** Job agendado que consulta Metabase API e alimenta o Supabase
@@ -30,6 +30,23 @@ npm run build
 
 # Lint
 npm run lint
+
+# Servir Edge Functions localmente (sem verificação de JWT)
+supabase functions serve --no-verify-jwt
+```
+
+## Variáveis de ambiente
+
+Arquivos de ambiente **não versionados** necessários para rodar o projeto:
+
+- `.env.local` — variáveis do Next.js (Supabase URL, anon key, Metabase, etc.)
+- `supabase/.env` — secrets das Edge Functions (service role key, Metabase credentials, etc.)
+
+**Worktrees:** ao trabalhar em worktrees isoladas, copiar esses arquivos do worktree principal antes de rodar o projeto:
+
+```bash
+cp /path/to/main/.env.local /path/to/worktree/.env.local
+cp /path/to/main/supabase/.env /path/to/worktree/supabase/.env
 ```
 
 ## Arquitetura
@@ -37,7 +54,7 @@ npm run lint
 ### Camadas
 
 1. **Frontend** — Next.js App Router, componentes shadcn/ui, tabelas ordenáveis e filtros por marca
-2. **Backend/BFF** — Server Actions e API Routes com lógica de negócio desacoplada da apresentação
+2. **Backend/BFF** — Server Actions com lógica de negócio desacoplada da apresentação
 3. **Dados** — Supabase PostgreSQL, Storage (criativos), Edge Functions
 4. **ETL** — Pipeline idempotente Metabase API → Supabase, com log de sincronização e alertas
 
@@ -76,14 +93,20 @@ Gerenciamento do banco usa **declarative schemas** — nunca criar migration fil
 ```
 supabase/
 ├── schemas/        # Estado declarado (editamos aqui)
-│   ├── creators.sql
-│   ├── brands.sql
-│   ├── ad_accounts.sql
-│   ├── creator_brands.sql
-│   ├── creatives.sql
-│   └── ad_metrics.sql
+│   ├── 01_creators.sql
+│   ├── 02_brands.sql
+│   ├── 03_ad_accounts.sql
+│   ├── 04_creator_brands.sql
+│   ├── 05_creatives.sql
+│   ├── 06_ad_metrics.sql
+│   ├── 07_get_creator_metrics.sql   # SQL Functions/RPC
+│   ├── 08_sync_logs.sql
+│   ├── 09_ad_account_daily_spend.sql
+│   └── 10_cron_schedule.sql
 └── migrations/     # Gerado automaticamente — não editar manualmente
 ```
+
+Prefixos numéricos (`01_`, `02_`, ...) definem a ordem de execução. Ao adicionar novos schemas, usar o próximo número da sequência.
 
 ### Limitações do diff
 
@@ -94,6 +117,81 @@ Não rastreados pelo `supabase db diff`: DML (INSERT/UPDATE/DELETE), RLS policie
 - Sempre adicionar novas colunas ao final das tabelas para evitar diffs confusos
 - Nunca resetar uma versão já deployada em produção — reverter via novo schema + novo diff
 - Configurar ordem de execução em `config.toml` via `[db.migrations] schema_paths` quando houver dependências entre tabelas
+
+## Padrões de código
+
+### Supabase Client: Server vs Client
+
+Existem dois clients distintos — usar o errado causa falhas de auth:
+
+- **Server** (Server Components, Server Actions, Middleware): `import { createClient } from "@/lib/supabase/server"` — async, usa cookies
+- **Client** (componentes `"use client"`): `import { createClient } from "@/lib/supabase/client"` — sync, sem cookies
+
+**Sempre criar nova instância** dentro de cada função (nunca usar variável global — incompatível com Fluid Compute do Supabase).
+
+### Server Actions
+
+Server actions ficam colocadas com suas páginas em `app/[route]/actions.ts`. Padrão:
+
+1. Validar input com `safeParse()` de schema Zod (de `lib/schemas/`)
+2. Retornar `{ success: true, [data?] } | { success: false; error: string }`
+3. Chamar `revalidatePath()` após mutações para atualizar a UI
+
+### Validação (Zod)
+
+Schemas vivem em `lib/schemas/` e exportam schema + type derivado:
+
+```typescript
+export const createBrandSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório").max(200),
+});
+export type CreateBrandInput = z.infer<typeof createBrandSchema>;
+```
+
+Mensagens de erro são em **português** (user-facing).
+
+### Client Components: useTransition + Toast
+
+Componentes client que chamam server actions usam `useTransition()` para loading state e `toast` (sonner) para feedback:
+
+```typescript
+const [isPending, startTransition] = useTransition();
+
+function handleSubmit(values: Input) {
+  startTransition(async () => {
+    const result = await myServerAction(values);
+    if (result.success) { toast.success("Sucesso!"); setOpen(false); }
+    else { toast.error(result.error); }
+  });
+}
+```
+
+### Middleware & Auth
+
+Middleware em `middleware.ts` → `lib/supabase/middleware.ts` protege `/dashboard/*`:
+- Usa `supabase.auth.getUser()` para verificar sessão
+- Redireciona para `/auth/login` se não autenticado
+- Rotas públicas: `/`, `/auth/*`
+
+Novas rotas protegidas sob `/dashboard/` são automaticamente cobertas.
+
+### Edge Functions (Deno)
+
+Edge Functions em `supabase/functions/[nome]/index.ts`:
+- Runtime Deno, imports via ESM CDN (`https://esm.sh/`)
+- Secrets via `Deno.env.get()` (configurados em `supabase/.env`, não em `.env.local`)
+- Usa `SUPABASE_SERVICE_ROLE_KEY` para operações privilegiadas (upserts)
+- Invocação: `supabase.functions.invoke("sync-ad-metrics", { body: { trigger: "manual" } })`
+
+### RPC Functions (Stored Procedures)
+
+SQL functions definidas em `supabase/schemas/` (ex: `07_get_creator_metrics.sql`) são chamadas via `supabase.rpc()`:
+
+```typescript
+const { data } = await supabase.rpc("get_creator_metrics", { p_brand_id: brandId });
+```
+
+Parâmetros SQL usam prefixo `p_`.
 
 ## Teste local
 

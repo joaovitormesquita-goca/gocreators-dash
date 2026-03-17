@@ -2,7 +2,7 @@
 
 **Última atualização:** 2026-03-16
 **Repo:** `joaovitormesquita-goca/gocreators-dash`
-**Total de issues:** 8 | **Concluídas:** 3/8 (37,5%)
+**Total de issues:** 8 | **Concluídas:** 5/8 (62,5%)
 
 > **Para agentes/Claude Code:** As issues completas estão no GitHub. Para puxar a descrição de qualquer issue, use:
 > ```bash
@@ -15,9 +15,9 @@
 | # | Issue | Status | Link |
 |---|-------|--------|------|
 | 1 | Tela de gerenciamento de marcas com ad accounts | ✅ Concluída | [#1](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/1) |
-| 2 | Agendamento diário do ETL (antes das 6h) | ⬚ Pendente | [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) |
+| 2 | Agendamento diário do ETL (antes das 6h) | ✅ Concluída | [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) |
 | 3 | Tabela e tela de histórico de sincronização | ✅ Concluída | [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) |
-| 4 | Nova tabela e ETL de gasto total diário por ad account | ⬚ Pendente | [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) |
+| 4 | Nova tabela e ETL de gasto total diário por ad account | ✅ Concluída | [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) |
 | 5 | Renomear dashboard de Creators para Tabela Mensal | ✅ Concluída | [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) |
 | 6 | Visão Mensal com gráficos de gasto e share % | ⬚ Pendente | [#6](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/6) |
 | 7 | Visão Diária com gráfico de gasto e share % | ⬚ Pendente | [#7](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/7) |
@@ -31,10 +31,10 @@
 #1 Marcas/Ad Accounts ──────────────────────── ✅ CONCLUÍDA
 
 #2 Agendamento ETL ─────────┐
-                             ├── complementares (#2 registra na tabela que #3 cria)
+                             ├── complementares ──────── ✅ CONCLUÍDA
 #3 Histórico de Sync ────────┘──────────────── ✅ CONCLUÍDA
 
-#4 Gasto total por ad account ──┬── bloqueia
+#4 Gasto total por ad account ──┬────────────── ✅ CONCLUÍDA (desbloqueia #6 e #7)
                                 ├── #6 Visão Mensal
                                 └── #7 Visão Diária
 
@@ -48,18 +48,18 @@
 | Trilha | Issues | Ordem |
 |--------|--------|-------|
 | **A — Gestão** | ~~#1~~ ✅ | Concluída |
-| **B — ETL/Sync** | ~~#3~~ ✅ → #2 → #4 | #3 concluída, #2 desbloqueada, #4 expande ETL |
-| **C — Dashboards** | ~~#5~~ ✅ → #6 → #7 | #5 concluída, #6 e #7 dependem de #4 |
+| **B — ETL/Sync** | ~~#3~~ ✅ → ~~#2~~ ✅ → ~~#4~~ ✅ | Trilha concluída |
+| **C — Dashboards** | ~~#5~~ ✅ → #6 → #7 | #5 concluída, #6 e #7 desbloqueadas (#4 concluída) |
 
-Trilhas A, início de B (#3) e início de C (#5) estão concluídas. Próximos passos: #2 (agendamento ETL, desbloqueada por #3) e #4 (gasto total, desbloqueia #6 e #7).
+Trilhas A e B estão 100% concluídas. Trilha C tem #5 concluída e #6/#7 desbloqueadas (dependiam de #4).
 
 ## Próximas prioridades
 
-Com as issues #1, #3 e #5 concluídas, as próximas issues recomendadas são:
+Com as issues #1, #2, #3, #4 e #5 concluídas, as próximas issues recomendadas são:
 
-1. **#2 — Agendamento ETL** (desbloqueada por #3) — configurar cron para execução diária antes das 6h BRT
-2. **#4 — Gasto total por ad account** (desbloqueia #6 e #7) — nova tabela + ETL
-3. **#6 e #7 — Visões com gráficos** (dependem de #4) — dashboards Recharts
+1. **#6 — Visão Mensal** (desbloqueada por #4 e #5) — gráficos Recharts de gasto e share % por mês
+2. **#7 — Visão Diária** (desbloqueada por #4 e #5) — gráfico Recharts de gasto e share % por dia
+3. **#8 — Tela individual por creator** (draft) — definir requisitos antes de implementar
 
 ---
 
@@ -92,24 +92,24 @@ Com as issues #1, #3 e #5 concluídas, as próximas issues recomendadas são:
 
 ---
 
-### [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) — Agendamento diário do ETL (antes das 6h)
+### [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) — ✅ Agendamento diário do ETL (antes das 6h)
 
 **Labels:** `etl`, `backend`, `enhancement`
 **Dependências:** #3 (para registrar execuções no histórico)
+**Status:** Concluída (PR [#11](https://github.com/joaovitormesquita-goca/gocreators-dash/pull/11))
 
 **Contexto:** ETL roda apenas manualmente via botão de sync. Precisa rodar automaticamente todo dia antes das 6h BRT.
 
-**Requisitos:**
-- Configurar execução automática diária da Edge Function `sync-ad-metrics`
-- Rodar antes das 6h (horário de Brasília)
-- Opções de implementação: `pg_cron` no Supabase ou cron externo (GitHub Actions, Supabase scheduled functions)
-- Falhas não devem bloquear execuções futuras
-- Manter botão de sync manual funcionando em paralelo
+**O que foi implementado:**
+- Configuração de execução automática diária da Edge Function `sync-ad-metrics`
+- Agendamento antes das 6h (horário de Brasília)
+- Falhas isoladas (não bloqueiam próxima execução)
+- Botão de sync manual continua funcionando em paralelo
 
 **Critérios de aceite:**
-- [ ] ETL roda automaticamente todo dia antes das 6h BRT
-- [ ] Falhas são isoladas (não bloqueiam próxima execução)
-- [ ] Sync manual continua funcionando
+- [x] ETL roda automaticamente todo dia antes das 6h BRT
+- [x] Falhas são isoladas (não bloqueiam próxima execução)
+- [x] Sync manual continua funcionando
 
 ---
 
@@ -137,33 +137,25 @@ Com as issues #1, #3 e #5 concluídas, as próximas issues recomendadas são:
 
 ---
 
-### [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) — Nova tabela e ETL de gasto total diário por ad account
+### [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) — ✅ Nova tabela e ETL de gasto total diário por ad account
 
 **Labels:** `etl`, `backend`, `enhancement`
 **Dependências:** nenhuma (mas bloqueia #6 e #7)
+**Status:** Concluída (PR [#11](https://github.com/joaovitormesquita-goca/gocreators-dash/pull/11))
 
 **Contexto:** Para calcular o share % (gasto em creators / gasto total da marca), precisamos do gasto total de cada ad account por dia. Dado disponível no Metabase.
 
-**Requisitos:**
-
-*Schema:*
-- Nova tabela `ad_account_daily_spend`:
-  - `id` (uuid, PK)
-  - `ad_account_id` (uuid, FK → ad_accounts)
-  - `date` (date)
-  - `spend` (numeric)
-  - Constraint UNIQUE em `(ad_account_id, date)`
-- Declarar schema em `supabase/schemas/ad_account_daily_spend.sql`
-
-*ETL:*
-- Adicionar query ao Metabase que puxa gasto total diário por conta de anúncio
-- Upsert na tabela `ad_account_daily_spend` (idempotente, on conflict update)
-- Incluir no fluxo da Edge Function `sync-ad-metrics` ou em function separada
+**O que foi implementado:**
+- Tabela `ad_account_daily_spend` com schema declarado em `supabase/schemas/`
+- Migration gerada e aplicada
+- ETL puxa gasto total diário por ad account via Metabase API
+- Upsert idempotente (on conflict update) na tabela
+- Integrado ao fluxo da Edge Function `sync-ad-metrics`
 
 **Critérios de aceite:**
-- [ ] Schema criado e migration gerada
-- [ ] ETL puxa e upserta gasto total diário por ad account
-- [ ] Dados disponíveis para cálculo de share %
+- [x] Schema criado e migration gerada
+- [x] ETL puxa e upserta gasto total diário por ad account
+- [x] Dados disponíveis para cálculo de share %
 
 ---
 
