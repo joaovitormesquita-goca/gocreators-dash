@@ -18,6 +18,7 @@ import {
   ArrowUpDown,
   ChevronDown,
   ChevronRight,
+  History,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import { EditBrandDialog } from "@/components/edit-brand-dialog";
 import { EditAdAccountDialog } from "@/components/edit-ad-account-dialog";
 import { CreateAdAccountDialog } from "@/components/create-ad-account-dialog";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { BackfillDialog } from "@/components/backfill-dialog";
 import {
   deleteBrand,
   deleteAdAccount,
@@ -51,6 +53,9 @@ export function BrandsTable({ brands }: { brands: BrandWithAdAccounts[] }) {
   const [deletingBrand, setDeletingBrand] = useState<BrandWithAdAccounts | null>(null);
   const [deletingAdAccount, setDeletingAdAccount] = useState<AdAccount | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
+
+  // Backfill state
+  const [backfillAdAccount, setBackfillAdAccount] = useState<AdAccount | null>(null);
 
   function handleSort() {
     setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -143,6 +148,7 @@ export function BrandsTable({ brands }: { brands: BrandWithAdAccounts[] }) {
                     onDelete={() => setDeletingBrand(brand)}
                     onEditAdAccount={setEditingAdAccount}
                     onDeleteAdAccount={setDeletingAdAccount}
+                    onBackfillAdAccount={setBackfillAdAccount}
                   />
                 );
               })
@@ -206,6 +212,18 @@ export function BrandsTable({ brands }: { brands: BrandWithAdAccounts[] }) {
         onConfirm={handleDeleteAdAccount}
         loading={isDeleting}
       />
+
+      {/* Backfill Dialog */}
+      {backfillAdAccount && (
+        <BackfillDialog
+          adAccountId={backfillAdAccount.id}
+          adAccountName={backfillAdAccount.name}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setBackfillAdAccount(null);
+          }}
+        />
+      )}
     </>
   );
 }
@@ -218,6 +236,7 @@ function BrandRow({
   onDelete,
   onEditAdAccount,
   onDeleteAdAccount,
+  onBackfillAdAccount,
 }: {
   brand: BrandWithAdAccounts;
   isExpanded: boolean;
@@ -226,6 +245,7 @@ function BrandRow({
   onDelete: () => void;
   onEditAdAccount: (aa: AdAccount) => void;
   onDeleteAdAccount: (aa: AdAccount) => void;
+  onBackfillAdAccount: (aa: AdAccount) => void;
 }) {
   return (
     <>
@@ -300,6 +320,14 @@ function BrandRow({
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onBackfillAdAccount(aa)}
+                                title="Importar historico"
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"

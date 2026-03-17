@@ -5,10 +5,17 @@ function escapeSQL(value: string): string {
 export function buildMetabaseQuery(
   metaAccountId: string,
   handles: string[],
+  dateFrom?: string,
+  dateTo?: string,
 ): string {
   const handleConditions = handles
     .map((h) => `ad_name ILIKE '%${escapeSQL(h)}%'`)
     .join(" OR ");
+
+  const dateCondition =
+    dateFrom && dateTo
+      ? `date_start >= '${escapeSQL(dateFrom)}' AND date_start < '${escapeSQL(dateTo)}'`
+      : `date_start >= CURRENT_DATE - INTERVAL '7 days'`;
 
   return `
 SELECT
@@ -22,13 +29,22 @@ SELECT
   SUM(COALESCE(impressions, 0)) AS impressions
 FROM raw.gogroup_ads_metrics
 WHERE account_id = '${escapeSQL(metaAccountId)}'
-  AND date_start >= CURRENT_DATE - INTERVAL '7 days'
+  AND ${dateCondition}
   AND (${handleConditions})
 GROUP BY ad_id, ad_name, created_time, date_start::date
   `.trim();
 }
 
-export function buildAccountSpendQuery(metaAccountId: string): string {
+export function buildAccountSpendQuery(
+  metaAccountId: string,
+  dateFrom?: string,
+  dateTo?: string,
+): string {
+  const dateCondition =
+    dateFrom && dateTo
+      ? `date_start >= '${escapeSQL(dateFrom)}' AND date_start < '${escapeSQL(dateTo)}'`
+      : `date_start >= CURRENT_DATE - INTERVAL '7 days'`;
+
   return `
 SELECT
   account_id,
@@ -36,7 +52,7 @@ SELECT
   SUM(COALESCE(spend, 0)) AS spend
 FROM raw.gogroup_ads_metrics
 WHERE account_id = '${escapeSQL(metaAccountId)}'
-  AND date_start >= CURRENT_DATE - INTERVAL '7 days'
+  AND ${dateCondition}
 GROUP BY account_id, date_start::date
   `.trim();
 }

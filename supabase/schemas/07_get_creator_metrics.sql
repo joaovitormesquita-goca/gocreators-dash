@@ -21,17 +21,24 @@ AS $$
     CASE WHEN SUM(am.impressions) > 0
       THEN ROUND(SUM(am.link_clicks)::numeric / SUM(am.impressions) * 100, 2) ELSE 0
     END AS ctr_total,
-    SUM(am.spend) FILTER (WHERE cr.created_time >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month') AS spend_recentes,
-    CASE WHEN SUM(am.spend) FILTER (WHERE cr.created_time >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month') > 0
+    SUM(am.spend) FILTER (WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
+      AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month') AS spend_recentes,
+    CASE WHEN SUM(am.spend) FILTER (WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
+      AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month') > 0
       THEN ROUND(
-        SUM(am.revenue) FILTER (WHERE cr.created_time >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month')
-        / SUM(am.spend) FILTER (WHERE cr.created_time >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'), 2)
+        SUM(am.revenue) FILTER (WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
+          AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month')
+        / SUM(am.spend) FILTER (WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
+          AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month'), 2)
       ELSE 0
     END AS roas_recentes,
-    CASE WHEN SUM(am.impressions) FILTER (WHERE cr.created_time >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month') > 0
+    CASE WHEN SUM(am.impressions) FILTER (WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
+      AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month') > 0
       THEN ROUND(
-        (SUM(am.link_clicks) FILTER (WHERE cr.created_time >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'))::numeric
-        / SUM(am.impressions) FILTER (WHERE cr.created_time >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month') * 100, 2)
+        (SUM(am.link_clicks) FILTER (WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
+          AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month'))::numeric
+        / SUM(am.impressions) FILTER (WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
+          AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month') * 100, 2)
       ELSE 0
     END AS ctr_recentes
   FROM ad_metrics am

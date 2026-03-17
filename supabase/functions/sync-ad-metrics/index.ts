@@ -9,9 +9,17 @@ Deno.serve(async (_req: Request) => {
   let supabase: ReturnType<typeof createClient> | null = null;
 
   try {
-    // Parse request body for trigger type
+    // Parse request body for trigger type and optional backfill params
     const body = await _req.json().catch(() => ({}));
-    const trigger = body.trigger === "scheduled" ? "scheduled" : "manual";
+    const trigger =
+      body.trigger === "scheduled"
+        ? "scheduled"
+        : body.trigger === "backfill"
+          ? "backfill"
+          : "manual";
+    const dateFrom: string | undefined = body.date_from;
+    const dateTo: string | undefined = body.date_to;
+    const filterAdAccountId: number | undefined = body.ad_account_id;
     const metabaseUrl = Deno.env.get("METABASE_URL");
     const metabaseUsername = Deno.env.get("METABASE_USERNAME");
     const metabasePassword = Deno.env.get("METABASE_PASSWORD");
@@ -38,7 +46,13 @@ Deno.serve(async (_req: Request) => {
     // Create sync log entry
     const { data: logRow } = await supabase
       .from("sync_logs")
-      .insert({ status: "running", trigger })
+      .insert({
+        status: "running",
+        trigger,
+        ad_account_id: filterAdAccountId ?? null,
+        date_from: dateFrom ?? null,
+        date_to: dateTo ?? null,
+      })
       .select("id")
       .single();
     syncLogId = logRow?.id ?? null;
@@ -73,8 +87,13 @@ Deno.serve(async (_req: Request) => {
 
     const results: SyncResult[] = [];
 
+    // Filter to specific ad account if requested (backfill mode)
+    const accountsToProcess = filterAdAccountId
+      ? (adAccounts as AdAccount[]).filter((a) => a.id === filterAdAccountId)
+      : (adAccounts as AdAccount[]);
+
     // Process each ad account sequentially
-    for (const account of adAccounts as AdAccount[]) {
+    for (const account of accountsToProcess) {
       const brandCreatorBrands = brandHandlesMap.get(account.brand_id);
 
       try {
@@ -83,6 +102,8 @@ Deno.serve(async (_req: Request) => {
           supabase,
           metabase,
           account,
+          dateFrom,
+          dateTo,
         );
 
         if (!brandCreatorBrands || brandCreatorBrands.length === 0) {
@@ -102,6 +123,8 @@ Deno.serve(async (_req: Request) => {
           metabase,
           account,
           brandCreatorBrands,
+          dateFrom,
+          dateTo,
         );
         result.account_spend_upserted = accountSpendUpserted;
         results.push(result);
@@ -183,10 +206,12 @@ async function processAdAccount(
   metabase: MetabaseClient,
   account: AdAccount,
   creatorBrands: CreatorBrand[],
+  dateFrom?: string,
+  dateTo?: string,
 ): Promise<SyncResult> {
   // Collect all handles for this brand
   const allHandles = creatorBrands.flatMap((cb) => cb.handles);
-  const sql = buildMetabaseQuery(account.meta_account_id, allHandles);
+  const sql = buildMetabaseQuery(account.meta_account_id, allHandles, dateFrom, dateTo);
   console.log(`Metabase query for ${account.meta_account_id}:\n${sql}`);
   const rows = await metabase.executeQuery(sql);
   console.log(`Metabase returned ${rows.length} rows for ${account.meta_account_id}`);
@@ -333,8 +358,10 @@ async function syncAccountDailySpend(
   supabase: ReturnType<typeof createClient>,
   metabase: MetabaseClient,
   account: AdAccount,
+  dateFrom?: string,
+  dateTo?: string,
 ): Promise<number> {
-  const sql = buildAccountSpendQuery(account.meta_account_id);
+  const sql = buildAccountSpendQuery(account.meta_account_id, dateFrom, dateTo);
   const rows = await metabase.executeRawQuery(sql);
 
   if (rows.length === 0) return 0;

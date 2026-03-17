@@ -45,7 +45,7 @@ function formatCtr(value: number | null) {
 
 function formatMonth(dateStr: string) {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+  return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 export function CreatorsTable({

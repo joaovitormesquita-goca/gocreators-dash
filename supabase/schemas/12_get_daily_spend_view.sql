@@ -17,7 +17,8 @@ AS $$
       am.date AS day,
       COALESCE(SUM(am.spend), 0) AS spend_total,
       COALESCE(SUM(am.spend) FILTER (
-        WHERE cr.created_time >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+        WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
+          AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month'
       ), 0) AS spend_recentes
     FROM ad_metrics am
     JOIN creatives cr ON cr.id = am.creative_id
