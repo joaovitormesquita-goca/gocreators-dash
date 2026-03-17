@@ -8,6 +8,11 @@ import {
   type CreateCreatorInput,
   type EditCreatorInput,
 } from "@/lib/schemas/creator";
+import {
+  bulkImportSchema,
+  type BulkImportInput,
+  type BulkImportResult,
+} from "@/lib/schemas/csv-import";
 
 export type CreatorBrand = {
   id: number;
@@ -217,4 +222,105 @@ export async function updateCreator(
 
   revalidatePath("/dashboard/creators/list");
   return { success: true };
+}
+
+export async function bulkImportCreators(
+  input: BulkImportInput,
+): Promise<BulkImportResult> {
+  const parsed = bulkImportSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const { brandId, newCreators, existingCreatorLinks } = parsed.data;
+  const supabase = await createClient();
+  const errors: Array<{ name: string; error: string }> = [];
+  let createdCount = 0;
+  let linkedCount = 0;
+  let handleAddedCount = 0;
+
+  // 1. Batch insert new creators
+  if (newCreators.length > 0) {
+    const { data: insertedCreators, error: creatorsError } = await supabase
+      .from("creators")
+      .insert(
+        newCreators.map((c) => ({
+          full_name: c.fullName,
+          email: c.email || null,
+        })),
+      )
+      .select("id, full_name");
+
+    if (creatorsError) {
+      return { success: false, error: creatorsError.message };
+    }
+
+    // Create creator_brands for each new creator
+    const brandRows = (insertedCreators ?? []).map((creator, i) => ({
+      creator_id: creator.id,
+      brand_id: brandId,
+      handles: [newCreators[i].handle],
+      start_date: newCreators[i].startDate,
+    }));
+
+    const { error: brandsError } = await supabase
+      .from("creator_brands")
+      .insert(brandRows);
+
+    if (brandsError) {
+      return { success: false, error: brandsError.message };
+    }
+
+    createdCount = insertedCreators?.length ?? 0;
+  }
+
+  // 2. Link existing creators
+  for (const link of existingCreatorLinks) {
+    if (link.existingAssignmentId) {
+      // Already linked to this brand — append handle
+      const { data: current, error: fetchErr } = await supabase
+        .from("creator_brands")
+        .select("handles")
+        .eq("id", link.existingAssignmentId)
+        .single();
+
+      if (fetchErr) {
+        errors.push({ name: `Creator #${link.creatorId}`, error: fetchErr.message });
+        continue;
+      }
+
+      const currentHandles = (current?.handles as string[]) ?? [];
+      if (!currentHandles.includes(link.handle)) {
+        const { error: updateErr } = await supabase
+          .from("creator_brands")
+          .update({ handles: [...currentHandles, link.handle] })
+          .eq("id", link.existingAssignmentId);
+
+        if (updateErr) {
+          errors.push({ name: `Creator #${link.creatorId}`, error: updateErr.message });
+          continue;
+        }
+        handleAddedCount++;
+      }
+    } else {
+      // Not linked to this brand — create new creator_brands row
+      const { error: insertErr } = await supabase
+        .from("creator_brands")
+        .insert({
+          creator_id: link.creatorId,
+          brand_id: brandId,
+          handles: [link.handle],
+          start_date: link.startDate,
+        });
+
+      if (insertErr) {
+        errors.push({ name: `Creator #${link.creatorId}`, error: insertErr.message });
+        continue;
+      }
+      linkedCount++;
+    }
+  }
+
+  revalidatePath("/dashboard/creators/list");
+  return { success: true, createdCount, linkedCount, handleAddedCount, errors };
 }
