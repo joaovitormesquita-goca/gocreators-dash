@@ -29,7 +29,28 @@ export class MetabaseClient {
     this.sessionToken = data.id;
   }
 
-  async executeQuery(sql: string, retry = true): Promise<MetabaseRow[]> {
+  async executeQuery(sql: string): Promise<MetabaseRow[]> {
+    const PAGE_SIZE = 2000;
+    const allRows: MetabaseRow[] = [];
+    let offset = 0;
+
+    while (true) {
+      const paginatedSql = `${sql}\nORDER BY ad_id, date\nLIMIT ${PAGE_SIZE} OFFSET ${offset}`;
+      const rows = await this.executeSingleQuery(paginatedSql);
+      allRows.push(...this.parseRows(rows));
+      console.log(`Metabase page offset=${offset}: ${rows.data.rows.length} rows`);
+
+      if (rows.data.rows.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
+
+    return allRows;
+  }
+
+  private async executeSingleQuery(
+    sql: string,
+    retry = true,
+  ): Promise<{ data: { cols: { name: string }[]; rows: unknown[][] } }> {
     if (!this.sessionToken) {
       await this.authenticate();
     }
@@ -44,12 +65,13 @@ export class MetabaseClient {
         database: this.databaseId,
         type: "native",
         native: { query: sql },
+        constraints: null,
       }),
     });
 
     if (res.status === 401 && retry) {
       await this.authenticate();
-      return this.executeQuery(sql, false);
+      return this.executeSingleQuery(sql, false);
     }
 
     if (!res.ok) {
@@ -57,8 +79,7 @@ export class MetabaseClient {
       throw new Error(`Metabase query failed (${res.status}): ${text}`);
     }
 
-    const data = await res.json();
-    return this.parseRows(data);
+    return await res.json();
   }
 
   async executeRawQuery(
@@ -79,6 +100,7 @@ export class MetabaseClient {
         database: this.databaseId,
         type: "native",
         native: { query: sql },
+        constraints: null,
       }),
     });
 
