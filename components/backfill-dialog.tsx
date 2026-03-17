@@ -27,6 +27,36 @@ interface Chunk {
   result?: BackfillChunkResult;
 }
 
+function formatDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function formatMonthLabel(dateFrom: string): string {
+  const d = new Date(dateFrom + "T00:00:00");
+  return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+}
+
+// Weekly sub-chunks for a given month range (hidden from user)
+function generateWeeklySubChunks(
+  dateFrom: string,
+  dateTo: string,
+): Array<{ dateFrom: string; dateTo: string }> {
+  const weeks: Array<{ dateFrom: string; dateTo: string }> = [];
+  let current = new Date(dateFrom + "T00:00:00");
+  const end = new Date(dateTo + "T00:00:00");
+
+  while (current < end) {
+    const weekEnd = new Date(current);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    if (weekEnd > end) weekEnd.setTime(end.getTime());
+
+    weeks.push({ dateFrom: formatDate(current), dateTo: formatDate(weekEnd) });
+    current = weekEnd;
+  }
+
+  return weeks;
+}
+
 function generateMonthlyChunks(dateFrom: string, dateTo: string): Chunk[] {
   const chunks: Chunk[] = [];
   const start = new Date(dateFrom + "T00:00:00");
@@ -35,9 +65,7 @@ function generateMonthlyChunks(dateFrom: string, dateTo: string): Chunk[] {
   let current = new Date(start.getFullYear(), start.getMonth(), 1);
 
   while (current < end) {
-    const chunkStart = new Date(
-      Math.max(current.getTime(), start.getTime()),
-    );
+    const chunkStart = new Date(Math.max(current.getTime(), start.getTime()));
     const nextMonth = new Date(current.getFullYear(), current.getMonth() + 1, 1);
     const chunkEnd = new Date(Math.min(nextMonth.getTime(), end.getTime()));
 
@@ -53,15 +81,6 @@ function generateMonthlyChunks(dateFrom: string, dateTo: string): Chunk[] {
   }
 
   return chunks;
-}
-
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function formatMonthLabel(dateFrom: string): string {
-  const d = new Date(dateFrom + "T00:00:00");
-  return d.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
 }
 
 interface BackfillDialogProps {
@@ -105,33 +124,45 @@ export function BackfillDialog({
       const chunk = chunks[i];
       if (chunk.status === "success") continue;
 
-      // Mark as running
+      // Mark month as running
       setChunks((prev) =>
         prev.map((c, idx) => (idx === i ? { ...c, status: "running" as ChunkStatus } : c)),
       );
 
-      const response = await startBackfillChunk({
-        adAccountId,
-        dateFrom: chunk.dateFrom,
-        dateTo: chunk.dateTo,
-      });
+      // Internally split the month into weekly sub-chunks
+      const weeks = generateWeeklySubChunks(chunk.dateFrom, chunk.dateTo);
 
-      if (response.success) {
-        const result = response.result;
-        totalCreatives += result.creativesUpserted ?? 0;
-        totalMetrics += result.metricsUpserted ?? 0;
-        totalSpend += result.accountSpendUpserted ?? 0;
+      let monthCreatives = 0;
+      let monthMetrics = 0;
+      let monthSpend = 0;
+      let monthError: string | undefined;
 
-        if (result.status === "error") {
-          errorCount++;
+      for (const week of weeks) {
+        if (cancelledRef.current) break;
+
+        const response = await startBackfillChunk({
+          adAccountId,
+          dateFrom: week.dateFrom,
+          dateTo: week.dateTo,
+        });
+
+        if (response.success) {
+          if (response.result.status === "error") {
+            monthError = response.result.error;
+            break;
+          }
+          monthCreatives += response.result.creativesUpserted ?? 0;
+          monthMetrics += response.result.metricsUpserted ?? 0;
+          monthSpend += response.result.accountSpendUpserted ?? 0;
+        } else {
+          monthError = response.error;
+          break;
         }
+      }
 
-        setChunks((prev) =>
-          prev.map((c, idx) =>
-            idx === i ? { ...c, status: result.status as ChunkStatus, result } : c,
-          ),
-        );
-      } else {
+      if (cancelledRef.current) break;
+
+      if (monthError) {
         errorCount++;
         setChunks((prev) =>
           prev.map((c, idx) =>
@@ -144,7 +175,30 @@ export function BackfillDialog({
                     dateFrom: chunk.dateFrom,
                     dateTo: chunk.dateTo,
                     status: "error",
-                    error: response.error,
+                    error: monthError,
+                  },
+                }
+              : c,
+          ),
+        );
+      } else {
+        totalCreatives += monthCreatives;
+        totalMetrics += monthMetrics;
+        totalSpend += monthSpend;
+        setChunks((prev) =>
+          prev.map((c, idx) =>
+            idx === i
+              ? {
+                  ...c,
+                  status: "success" as ChunkStatus,
+                  result: {
+                    adAccountId,
+                    dateFrom: chunk.dateFrom,
+                    dateTo: chunk.dateTo,
+                    status: "success",
+                    creativesUpserted: monthCreatives,
+                    metricsUpserted: monthMetrics,
+                    accountSpendUpserted: monthSpend,
                   },
                 }
               : c,
@@ -219,7 +273,7 @@ export function BackfillDialog({
           {/* Progress summary */}
           {chunks.length > 0 && (
             <div className="text-sm text-muted-foreground">
-              {completedCount} de {totalCount} chunks concluidos
+              {completedCount} de {totalCount} meses concluidos
             </div>
           )}
 
@@ -235,9 +289,6 @@ export function BackfillDialog({
                     <ChunkStatusIcon status={chunk.status} />
                     <span className="font-medium">
                       {formatMonthLabel(chunk.dateFrom)}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                      {chunk.dateFrom} - {chunk.dateTo}
                     </span>
                   </div>
                   <div>
