@@ -12,6 +12,11 @@ import {
   type CreateAdAccountInput,
   type EditAdAccountInput,
 } from "@/lib/schemas/brand";
+import {
+  backfillChunkSchema,
+  type BackfillChunkInput,
+  type BackfillChunkResult,
+} from "@/lib/schemas/backfill";
 
 export type AdAccount = {
   id: number;
@@ -192,3 +197,50 @@ export async function deleteAdAccount(
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
+
+// --- Backfill actions ---
+
+export async function startBackfillChunk(
+  input: BackfillChunkInput,
+): Promise<
+  | { success: true; result: BackfillChunkResult }
+  | { success: false; error: string }
+> {
+  const parsed = backfillChunkSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.functions.invoke("sync-ad-metrics", {
+    body: {
+      trigger: "backfill",
+      ad_account_id: parsed.data.adAccountId,
+      date_from: parsed.data.dateFrom,
+      date_to: parsed.data.dateTo,
+    },
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  const results = data?.results ?? [];
+  const first = results[0];
+
+  return {
+    success: true,
+    result: {
+      adAccountId: parsed.data.adAccountId,
+      dateFrom: parsed.data.dateFrom,
+      dateTo: parsed.data.dateTo,
+      status: first?.status === "error" ? "error" : "success",
+      error: first?.error,
+      creativesUpserted: first?.creatives_upserted ?? 0,
+      metricsUpserted: first?.metrics_upserted ?? 0,
+      accountSpendUpserted: first?.account_spend_upserted ?? 0,
+    },
+  };
+}
+
