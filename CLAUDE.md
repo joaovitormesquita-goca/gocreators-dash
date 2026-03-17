@@ -203,6 +203,16 @@ Usuário de teste para login via Chrome DevTools MCP ou testes manuais:
 
 Criado via Supabase Auth API no ambiente local. Não usar INSERT direto em `auth.users` — sempre usar a API (`/auth/v1/signup`) para que `auth.identities` seja populado corretamente.
 
+## Pull Requests
+
+Ao abrir um PR que resolve uma ou mais issues, incluir no body do PR as keywords do GitHub para fechamento automático (`Closes #N`). Isso garante que as issues sejam fechadas automaticamente ao mergear o PR.
+
+Exemplo:
+```
+Closes #6
+Closes #7
+```
+
 ## Linguagem
 
 O código e commits devem ser em **inglês**. A documentação do projeto e comunicação são em **português (BR)**.
