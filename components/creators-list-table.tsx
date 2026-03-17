@@ -11,6 +11,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowDown, ArrowUp, ArrowUpDown, Pencil } from "lucide-react";
 import { EditCreatorDialog } from "@/components/edit-creator-dialog";
 import type { CreatorWithBrands } from "@/app/dashboard/creators/list/actions";
@@ -28,6 +35,7 @@ export function CreatorsListTable({
 }) {
   const [sortKey, setSortKey] = useState<SortKey>("full_name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [selectedBrandId, setSelectedBrandId] = useState<string>("all");
   const [editingCreator, setEditingCreator] =
     useState<CreatorWithBrands | null>(null);
 
@@ -41,13 +49,19 @@ export function CreatorsListTable({
   }
 
   const sorted = useMemo(() => {
-    return [...creators].sort((a, b) => {
+    const filtered =
+      selectedBrandId === "all"
+        ? creators
+        : creators.filter((c) =>
+            c.brands.some((b) => b.id === Number(selectedBrandId))
+          );
+    return [...filtered].sort((a, b) => {
       const aVal = a[sortKey] ?? "";
       const bVal = b[sortKey] ?? "";
       const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [creators, sortKey, sortDir]);
+  }, [creators, sortKey, sortDir, selectedBrandId]);
 
   function SortIcon({ column }: { column: SortKey }) {
     if (sortKey !== column)
@@ -61,6 +75,21 @@ export function CreatorsListTable({
 
   return (
     <>
+      <div className="flex items-center gap-2">
+        <Select value={selectedBrandId} onValueChange={setSelectedBrandId}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filtrar por marca" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as marcas</SelectItem>
+            {brands.map((brand) => (
+              <SelectItem key={brand.id} value={String(brand.id)}>
+                {brand.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
