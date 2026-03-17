@@ -2,16 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getBrands as _getBrands } from "@/lib/queries/brands";
 
 export async function getBrands() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("brands")
-    .select("id, name")
-    .order("name");
-
-  if (error) throw new Error(error.message);
-  return data;
+  return _getBrands();
 }
 
 export type CreatorMetric = {

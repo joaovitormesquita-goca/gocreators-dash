@@ -1,6 +1,6 @@
 "use client";
 
-import { TableProperties, UserPlus, Building2, History } from "lucide-react";
+import { TableProperties, BarChart3, CalendarDays, UserPlus, Building2, History } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -25,6 +25,16 @@ const navSections = [
         title: "Tabela Mensal",
         href: "/dashboard/creators",
         icon: TableProperties,
+      },
+      {
+        title: "Visão Mensal",
+        href: "/dashboard/monthly-view",
+        icon: BarChart3,
+      },
+      {
+        title: "Visão Diária",
+        href: "/dashboard/daily-view",
+        icon: CalendarDays,
       },
     ],
   },
