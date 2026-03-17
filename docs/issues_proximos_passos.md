@@ -1,8 +1,8 @@
 # Próximos passos — Issues planejadas
 
-**Última atualização:** 2026-03-15
+**Última atualização:** 2026-03-16
 **Repo:** `joaovitormesquita-goca/gocreators-dash`
-**Total de issues:** 8 | **Concluídas:** 1/8 (12,5%)
+**Total de issues:** 8 | **Concluídas:** 3/8 (37,5%)
 
 > **Para agentes/Claude Code:** As issues completas estão no GitHub. Para puxar a descrição de qualquer issue, use:
 > ```bash
@@ -16,9 +16,9 @@
 |---|-------|--------|------|
 | 1 | Tela de gerenciamento de marcas com ad accounts | ✅ Concluída | [#1](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/1) |
 | 2 | Agendamento diário do ETL (antes das 6h) | ⬚ Pendente | [#2](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/2) |
-| 3 | Tabela e tela de histórico de sincronização | ⬚ Pendente | [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) |
+| 3 | Tabela e tela de histórico de sincronização | ✅ Concluída | [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) |
 | 4 | Nova tabela e ETL de gasto total diário por ad account | ⬚ Pendente | [#4](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/4) |
-| 5 | Renomear dashboard de Creators para Tabela Mensal | ⬚ Pendente | [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) |
+| 5 | Renomear dashboard de Creators para Tabela Mensal | ✅ Concluída | [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) |
 | 6 | Visão Mensal com gráficos de gasto e share % | ⬚ Pendente | [#6](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/6) |
 | 7 | Visão Diária com gráfico de gasto e share % | ⬚ Pendente | [#7](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/7) |
 | 8 | Tela de dados individuais por creator (draft) | 🟡 Draft | [#8](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/8) |
@@ -32,13 +32,13 @@
 
 #2 Agendamento ETL ─────────┐
                              ├── complementares (#2 registra na tabela que #3 cria)
-#3 Histórico de Sync ────────┘
+#3 Histórico de Sync ────────┘──────────────── ✅ CONCLUÍDA
 
 #4 Gasto total por ad account ──┬── bloqueia
                                 ├── #6 Visão Mensal
                                 └── #7 Visão Diária
 
-#5 Renomear para Tabela Mensal ─── (independente, fazer antes de #6/#7)
+#5 Renomear para Tabela Mensal ─────────────── ✅ CONCLUÍDA
 
 #8 Tela individual creator ──────── (draft, sem dependência)
 ```
@@ -48,20 +48,18 @@
 | Trilha | Issues | Ordem |
 |--------|--------|-------|
 | **A — Gestão** | ~~#1~~ ✅ | Concluída |
-| **B — ETL/Sync** | #3 → #2 → #4 | #3 cria `sync_logs` e atualiza Edge Function, #2 agenda, #4 expande ETL |
-| **C — Dashboards** | #5 → #6 → #7 | #5 reorganiza navegação, #6 e #7 dependem de #4 |
+| **B — ETL/Sync** | ~~#3~~ ✅ → #2 → #4 | #3 concluída, #2 desbloqueada, #4 expande ETL |
+| **C — Dashboards** | ~~#5~~ ✅ → #6 → #7 | #5 concluída, #6 e #7 dependem de #4 |
 
-Trilha A está concluída. Trilha B pode começar imediatamente. Trilha C começa com #5 (rápida) e depende de #4 (trilha B) para #6 e #7.
+Trilhas A, início de B (#3) e início de C (#5) estão concluídas. Próximos passos: #2 (agendamento ETL, desbloqueada por #3) e #4 (gasto total, desbloqueia #6 e #7).
 
 ## Próximas prioridades
 
-Com a issue #1 concluída, as próximas issues recomendadas são:
+Com as issues #1, #3 e #5 concluídas, as próximas issues recomendadas são:
 
-1. **#3 — Histórico de Sync** (desbloqueia #2) — criar tabela `sync_logs` e atualizar Edge Function
-2. **#5 — Renomear para Tabela Mensal** (rápida, independente) — reorganizar navegação
-3. **#2 — Agendamento ETL** (depende de #3) — configurar cron
-4. **#4 — Gasto total por ad account** (desbloqueia #6 e #7) — nova tabela + ETL
-5. **#6 e #7 — Visões com gráficos** (dependem de #4 e #5) — dashboards Recharts
+1. **#2 — Agendamento ETL** (desbloqueada por #3) — configurar cron para execução diária antes das 6h BRT
+2. **#4 — Gasto total por ad account** (desbloqueia #6 e #7) — nova tabela + ETL
+3. **#6 e #7 — Visões com gráficos** (dependem de #4) — dashboards Recharts
 
 ---
 
@@ -115,39 +113,27 @@ Com a issue #1 concluída, as próximas issues recomendadas são:
 
 ---
 
-### [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) — Tabela e tela de histórico de sincronização
+### [#3](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/3) — ✅ Tabela e tela de histórico de sincronização
 
 **Labels:** `etl`, `frontend`, `backend`, `enhancement`
 **Dependências:** nenhuma
+**Status:** Concluída (PR [#10](https://github.com/joaovitormesquita-goca/gocreators-dash/pull/10))
 
 **Contexto:** Não há registro das execuções do ETL. Precisamos de audit trail e tela dedicada.
 
-**Requisitos:**
-
-*Backend/Schema:*
-- Nova tabela `sync_logs`:
-  - `id` (uuid, PK)
-  - `started_at` (timestamptz)
-  - `finished_at` (timestamptz)
-  - `status` (text: 'success', 'error', 'running')
-  - `trigger` (text: 'manual', 'scheduled')
-  - `creatives_upserted` (integer)
-  - `metrics_upserted` (integer)
-  - `unmatched_ads` (integer)
-  - `error_message` (text, nullable)
-- Declarar schema em `supabase/schemas/sync_logs.sql`
-- Edge Function `sync-ad-metrics` deve registrar cada execução nessa tabela
-
-*Frontend:*
-- Página `/dashboard/sync`
-- Listagem do histórico: data/hora, status (badge), duração, registros processados, ads não matchados
-- Ordenação por data (mais recente primeiro)
+**O que foi implementado:**
+- Schema `sync_logs` declarado em `supabase/schemas/08_sync_logs.sql`
+- Migration `20260316123551_add_sync_logs_table.sql` gerada e aplicada
+- Edge Function `sync-ad-metrics` atualizada para registrar execuções (sucesso e erro)
+- Página `/dashboard/sync` com componente `SyncHistoryTable`
+- Server actions em `app/dashboard/sync/actions.ts`
+- Link "Histórico de Sync" adicionado ao sidebar
 
 **Critérios de aceite:**
-- [ ] Schema `sync_logs` criado
-- [ ] Edge Function registra execuções (sucesso e erro)
-- [ ] Tela de histórico exibe logs com status e detalhes
-- [ ] Sync manual e agendado são diferenciados no log
+- [x] Schema `sync_logs` criado
+- [x] Edge Function registra execuções (sucesso e erro)
+- [x] Tela de histórico exibe logs com status e detalhes
+- [x] Sync manual e agendado são diferenciados no log
 
 ---
 
@@ -181,22 +167,22 @@ Com a issue #1 concluída, as próximas issues recomendadas são:
 
 ---
 
-### [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) — Renomear dashboard de Creators para Tabela Mensal
+### [#5](https://github.com/joaovitormesquita-goca/gocreators-dash/issues/5) — ✅ Renomear dashboard de Creators para Tabela Mensal
 
 **Labels:** `frontend`, `enhancement`
-**Dependências:** nenhuma (mas fazer antes de #6 e #7)
+**Dependências:** nenhuma
+**Status:** Concluída (PR [#10](https://github.com/joaovitormesquita-goca/gocreators-dash/pull/10))
 
 **Contexto:** O dashboard atual será uma das várias visões. Renomear para diferenciar das novas visões com gráficos.
 
-**Requisitos:**
-- Renomear título da página de "Creators" para "Tabela Mensal"
-- Atualizar item no sidebar
-- Reorganizar navegação para acomodar novas visões (Visão Mensal, Visão Diária)
-- Ajustar rota conforme necessário
+**O que foi implementado:**
+- Título da página renomeado de "Creators" para "Tabela Mensal"
+- Sidebar reorganizado com seção "Dashboards" contendo "Tabela Mensal" e placeholders para futuras visões
+- Navegação reestruturada em `components/app-sidebar.tsx` para acomodar novas visões
 
 **Critérios de aceite:**
-- [ ] Título e sidebar refletem "Tabela Mensal"
-- [ ] Navegação organizada para acomodar futuras visões
+- [x] Título e sidebar refletem "Tabela Mensal"
+- [x] Navegação organizada para acomodar futuras visões
 
 ---
 

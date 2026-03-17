@@ -61,6 +61,41 @@ export class MetabaseClient {
     return this.parseRows(data);
   }
 
+  async executeRawQuery(
+    sql: string,
+    retry = true,
+  ): Promise<Record<string, unknown>[]> {
+    if (!this.sessionToken) {
+      await this.authenticate();
+    }
+
+    const res = await fetch(`${this.url}/api/dataset`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Metabase-Session": this.sessionToken!,
+      },
+      body: JSON.stringify({
+        database: this.databaseId,
+        type: "native",
+        native: { query: sql },
+      }),
+    });
+
+    if (res.status === 401 && retry) {
+      await this.authenticate();
+      return this.executeRawQuery(sql, false);
+    }
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Metabase query failed (${res.status}): ${text}`);
+    }
+
+    const data = await res.json();
+    return this.parseRawRows(data);
+  }
+
   private parseRows(data: {
     data: { cols: { name: string }[]; rows: unknown[][] };
   }): MetabaseRow[] {
@@ -80,6 +115,19 @@ export class MetabaseClient {
         link_clicks: Number(obj.link_clicks) || 0,
         impressions: Number(obj.impressions) || 0,
       };
+    });
+  }
+
+  private parseRawRows(data: {
+    data: { cols: { name: string }[]; rows: unknown[][] };
+  }): Record<string, unknown>[] {
+    const cols = data.data.cols.map((c: { name: string }) => c.name);
+    return data.data.rows.map((row: unknown[]) => {
+      const obj: Record<string, unknown> = {};
+      cols.forEach((col: string, i: number) => {
+        obj[col] = row[i];
+      });
+      return obj;
     });
   }
 }

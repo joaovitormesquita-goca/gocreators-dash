@@ -93,6 +93,7 @@ export function SyncHistoryTable({ logs }: { logs: SyncLog[] }) {
               <TableHead>Duração</TableHead>
               <TableHead className="text-right">Criativos</TableHead>
               <TableHead className="text-right">Métricas</TableHead>
+              <TableHead className="text-right">Gastos</TableHead>
               <TableHead className="text-right">Não casados</TableHead>
               <TableHead>Gatilho</TableHead>
             </TableRow>
@@ -129,6 +130,9 @@ export function SyncHistoryTable({ logs }: { logs: SyncLog[] }) {
                 </TableCell>
                 <TableCell className="text-right">
                   {log.metrics_upserted}
+                </TableCell>
+                <TableCell className="text-right">
+                  {log.account_spend_upserted}
                 </TableCell>
                 <TableCell className="text-right">
                   {log.unmatched_ads}
