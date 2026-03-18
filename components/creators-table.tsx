@@ -63,13 +63,20 @@ export function CreatorsTable({
   const [isPending, startTransition] = useTransition();
   const [sortKey, setSortKey] = useState<SortKey>("creator");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
 
   const selectedBrandId = searchParams.get("brand")
     ? Number(searchParams.get("brand"))
     : initialBrandId;
 
+  const availableMonths = useMemo(() => {
+    const unique = Array.from(new Set(metrics.map((m) => m.month)));
+    return unique.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  }, [metrics]);
+
   function handleBrandChange(value: string) {
     router.push(`/dashboard/creators?brand=${value}`);
+    setSelectedMonth("all");
     startTransition(async () => {
       const data = await getCreatorMetrics(Number(value));
       setMetrics(data);
@@ -86,7 +93,11 @@ export function CreatorsTable({
   }
 
   const sorted = useMemo(() => {
-    return [...metrics].sort((a, b) => {
+    const filtered =
+      selectedMonth === "all"
+        ? metrics
+        : metrics.filter((m) => m.month === selectedMonth);
+    return [...filtered].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
       if (aVal == null && bVal == null) return 0;
@@ -95,7 +106,7 @@ export function CreatorsTable({
       const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [metrics, sortKey, sortDir]);
+  }, [metrics, sortKey, sortDir, selectedMonth]);
 
   function SortIcon({ column }: { column: SortKey }) {
     if (sortKey !== column) return <ArrowUpDown className="ml-1 h-3 w-3 inline" />;
@@ -132,6 +143,24 @@ export function CreatorsTable({
             {brands.map((b) => (
               <SelectItem key={b.id} value={b.id.toString()}>
                 {b.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <label className="text-sm font-medium text-muted-foreground">Mês:</label>
+        <Select
+          value={selectedMonth}
+          onValueChange={setSelectedMonth}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Todos os meses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os meses</SelectItem>
+            {availableMonths.map((m) => (
+              <SelectItem key={m} value={m}>
+                {formatMonth(m)}
               </SelectItem>
             ))}
           </SelectContent>
