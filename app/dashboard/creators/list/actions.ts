@@ -14,6 +14,10 @@ import {
   type BulkImportResult,
 } from "@/lib/schemas/csv-import";
 
+function splitHandles(raw: string): string[] {
+  return raw.split(",").map((h) => h.trim()).filter(Boolean);
+}
+
 export type CreatorBrand = {
   id: number;
   assignmentId: number;
@@ -115,10 +119,7 @@ export async function createCreatorWithBrands(
   const creatorBrandsRows = brandAssignments.map((ba) => ({
     creator_id: creator.id,
     brand_id: Number(ba.brandId),
-    handles: ba.handles
-      .split(",")
-      .map((h) => h.trim())
-      .filter(Boolean),
+    handles: splitHandles(ba.handles),
     start_date: ba.startDate.toISOString().split("T")[0],
   }));
 
@@ -190,7 +191,7 @@ export async function updateCreator(
     const { error: updateError } = await supabase
       .from("creator_brands")
       .update({
-        handles: ba.handles.split(",").map((h) => h.trim()).filter(Boolean),
+        handles: splitHandles(ba.handles),
         start_date: ba.startDate.toISOString().split("T")[0],
       })
       .eq("id", ba.assignmentId!);
@@ -259,7 +260,7 @@ export async function bulkImportCreators(
     const brandRows = (insertedCreators ?? []).map((creator, i) => ({
       creator_id: creator.id,
       brand_id: brandId,
-      handles: [newCreators[i].handle],
+      handles: splitHandles(newCreators[i].handle),
       start_date: newCreators[i].startDate,
     }));
 
@@ -290,10 +291,12 @@ export async function bulkImportCreators(
       }
 
       const currentHandles = (current?.handles as string[]) ?? [];
-      if (!currentHandles.includes(link.handle)) {
+      const newHandles = splitHandles(link.handle);
+      const merged = [...new Set([...currentHandles, ...newHandles])];
+      if (merged.length > currentHandles.length) {
         const { error: updateErr } = await supabase
           .from("creator_brands")
-          .update({ handles: [...currentHandles, link.handle] })
+          .update({ handles: merged })
           .eq("id", link.existingAssignmentId);
 
         if (updateErr) {
@@ -309,7 +312,7 @@ export async function bulkImportCreators(
         .insert({
           creator_id: link.creatorId,
           brand_id: brandId,
-          handles: [link.handle],
+          handles: splitHandles(link.handle),
           start_date: link.startDate,
         });
 
