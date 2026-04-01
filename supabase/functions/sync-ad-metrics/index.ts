@@ -253,24 +253,26 @@ async function processAdAccount(
   // Deduplicate creatives by meta_ad_id (pick first match)
   const uniqueCreatives = new Map<
     string,
-    { creatorBrandId: number; createdTime: string }
+    { creatorBrandId: number; createdTime: string; adName: string }
   >();
   for (const { row, creatorBrandId } of matched) {
     if (!uniqueCreatives.has(row.ad_id)) {
       uniqueCreatives.set(row.ad_id, {
         creatorBrandId,
         createdTime: row.created_time,
+        adName: row.ad_name,
       });
     }
   }
 
   // Upsert creatives — created_time is included but won't change (same source value)
   const creativesToUpsert = Array.from(uniqueCreatives.entries()).map(
-    ([metaAdId, { creatorBrandId, createdTime }]) => ({
+    ([metaAdId, { creatorBrandId, createdTime, adName }]) => ({
       creator_brand_id: creatorBrandId,
       ad_account_id: account.id,
       meta_ad_id: metaAdId,
       created_time: createdTime,
+      ad_name: adName,
     }),
   );
 
