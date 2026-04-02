@@ -18,6 +18,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { getOverviewData, type OverviewRow } from "@/app/dashboard/overview/actions";
 
 const BRAND_COLORS = [
@@ -67,8 +83,10 @@ export function OverviewTable({ initialData }: { initialData: OverviewRow[] }) {
   const [data, setData] = useState(initialData);
   const [isPending, startTransition] = useTransition();
   const [period, setPeriod] = useState("11");
+  const [selectedBrandIds, setSelectedBrandIds] = useState<number[]>([]);
+  const [brandPopoverOpen, setBrandPopoverOpen] = useState(false);
 
-  const brands = useMemo<BrandInfo[]>(() => {
+  const allBrands = useMemo<BrandInfo[]>(() => {
     const seen = new Map<number, string>();
     for (const row of data) {
       if (!seen.has(row.brand_id)) {
@@ -83,6 +101,29 @@ export function OverviewTable({ initialData }: { initialData: OverviewRow[] }) {
         color: BRAND_COLORS[i % BRAND_COLORS.length],
       }));
   }, [data]);
+
+  const brands = useMemo(() => {
+    if (selectedBrandIds.length === 0) return allBrands;
+    return allBrands.filter((b) => selectedBrandIds.includes(b.id));
+  }, [allBrands, selectedBrandIds]);
+
+  const allBrandsSelected = selectedBrandIds.length === 0 || selectedBrandIds.length === allBrands.length;
+
+  function toggleBrand(id: number) {
+    setSelectedBrandIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function toggleAllBrands() {
+    setSelectedBrandIds(allBrandsSelected ? [] : allBrands.map((b) => b.id));
+  }
+
+  const brandLabel = allBrandsSelected
+    ? "Todas as marcas"
+    : selectedBrandIds.length === 1
+      ? allBrands.find((b) => b.id === selectedBrandIds[0])?.name ?? "1 marca"
+      : `${selectedBrandIds.length} marcas`;
 
   const months = useMemo(() => {
     const unique = Array.from(new Set(data.map((r) => r.month)));
@@ -143,7 +184,7 @@ export function OverviewTable({ initialData }: { initialData: OverviewRow[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <label className="text-sm font-medium text-muted-foreground">Período:</label>
         <Select value={period} onValueChange={handlePeriodChange}>
           <SelectTrigger className="w-[220px]">
@@ -157,6 +198,60 @@ export function OverviewTable({ initialData }: { initialData: OverviewRow[] }) {
             ))}
           </SelectContent>
         </Select>
+
+        <label className="text-sm font-medium text-muted-foreground">Marcas:</label>
+        <Popover open={brandPopoverOpen} onOpenChange={setBrandPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={brandPopoverOpen}
+              className="w-[240px] justify-between"
+            >
+              <Building2 className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+              <span className="truncate">{brandLabel}</span>
+              <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[240px] p-0">
+            <Command>
+              <CommandInput placeholder="Buscar marca..." />
+              <CommandList>
+                <CommandEmpty>Nenhuma marca encontrada.</CommandEmpty>
+                <CommandGroup>
+                  <CommandItem onSelect={toggleAllBrands}>
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        allBrandsSelected ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    Selecionar todas
+                  </CommandItem>
+                  {allBrands.map((brand) => (
+                    <CommandItem
+                      key={brand.id}
+                      value={brand.name}
+                      onSelect={() => toggleBrand(brand.id)}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          selectedBrandIds.includes(brand.id)
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      <span style={{ color: brand.color }} className="font-medium">
+                        {brand.name}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="rounded-md border overflow-x-auto">
