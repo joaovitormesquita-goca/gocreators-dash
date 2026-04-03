@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git Workflow
+
+Always create a new branch and PR for changes — never commit directly to main unless explicitly told to.
+
+## Deployment Rules
+
+Never push migrations or changes to production/remote without explicit user confirmation. Always ask before deploying.
+
 ## Projeto
 
 Plataforma interna para gestores de tráfego e acompanhadores de creators monitorarem a performance de criativos UGC vinculados a múltiplas marcas/contas de anúncio no Meta Ads. Dados originados de um banco existente de Facebook Ads consultado via Metabase API.
@@ -9,12 +17,13 @@ Plataforma interna para gestores de tráfego e acompanhadores de creators monito
 ## Stack
 
 - **Framework:** Next.js 14 com App Router (template `with-supabase`)
-- **UI:** Tailwind CSS + shadcn/ui
+- **UI:** Tailwind CSS v4 + shadcn/ui — ao adicionar componentes, garantir compatibilidade com Tailwind v4. Não misturar padrões v3 e v4.
 - **Gráficos:** Recharts
 - **Backend:** Next.js Server Actions (sem API Routes custom — Edge Functions só para ETL)
 - **Auth:** Supabase Auth — perfil único, sem diferenciação de papéis (todos os usuários autenticados têm acesso total)
 - **Banco:** Supabase (PostgreSQL) — sem Row Level Security por perfil
-- **ETL:** Job agendado que consulta Metabase API e alimenta o Supabase
+- **ETL:** Supabase Edge Functions — job agendado que consulta Metabase API e alimenta o Supabase
+- **Linguagens:** TypeScript e JavaScript. Sempre usar TypeScript para novos arquivos.
 
 ## Comandos
 
@@ -117,6 +126,7 @@ Não rastreados pelo `supabase db diff`: DML (INSERT/UPDATE/DELETE), RLS policie
 - Sempre adicionar novas colunas ao final das tabelas para evitar diffs confusos
 - Nunca resetar uma versão já deployada em produção — reverter via novo schema + novo diff
 - Configurar ordem de execução em `config.toml` via `[db.migrations] schema_paths` quando houver dependências entre tabelas
+- Usar `supabase migration up` para aplicar migrations localmente. Não aplicar migrations manualmente via Supabase MCP ou SQL direto.
 
 ## Padrões de código
 
