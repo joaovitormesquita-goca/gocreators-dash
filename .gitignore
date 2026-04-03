@@ -45,5 +45,6 @@ supabase/.env
 next-env.d.ts
 
 # claude
-.claude
+.claude/*
+!.claude/skills/
 .mcp.json
