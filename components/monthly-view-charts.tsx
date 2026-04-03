@@ -22,9 +22,9 @@ import {
   type DatePreset,
 } from "@/components/date-period-selector";
 import {
-  SpendShareChart,
-  type SpendShareDataPoint,
-} from "@/components/spend-share-chart";
+  CombinedSpendShareChart,
+  type CombinedSpendShareDataPoint,
+} from "@/components/combined-spend-share-chart";
 import { getMonthlySpendView, getCreatorsByBrand, type MonthlySpendRow } from "@/app/dashboard/monthly-view/actions";
 
 type Brand = { id: number; name: string };
@@ -60,19 +60,24 @@ const monthlyPresets: DatePreset[] = [
   },
 ];
 
-function toChartData(
+function toCombinedChartData(
   rows: MonthlySpendRow[],
-  spendKey: "spend_total" | "spend_recentes",
-): SpendShareDataPoint[] {
+): CombinedSpendShareDataPoint[] {
   return rows.map((row) => {
-    const spend = Number(row[spendKey]) || 0;
+    const spendTotal = Number(row.spend_total) || 0;
+    const spendRecentes = Number(row.spend_recentes) || 0;
     const brandTotal = Number(row.brand_total_spend) || 0;
-    const sharePercent = brandTotal > 0 ? (spend / brandTotal) * 100 : 0;
     const date = new Date(row.month + "T00:00:00");
     return {
       label: format(date, "MMM/yy", { locale: ptBR }),
-      spend,
-      sharePercent: Math.round(sharePercent * 10) / 10,
+      spendTotal,
+      spendRecentes,
+      sharePercentTotal:
+        brandTotal > 0 ? Math.round((spendTotal / brandTotal) * 1000) / 10 : 0,
+      sharePercentRecentes:
+        brandTotal > 0
+          ? Math.round((spendRecentes / brandTotal) * 1000) / 10
+          : 0,
     };
   });
 }
@@ -150,8 +155,7 @@ export function MonthlyViewCharts({
     }
   }
 
-  const totalChartData = toChartData(data, "spend_total");
-  const recentesChartData = toChartData(data, "spend_recentes");
+  const combinedChartData = toCombinedChartData(data);
 
   return (
     <div className="space-y-6">
@@ -188,21 +192,12 @@ export function MonthlyViewCharts({
       />
 
       {isPending ? (
-        <div className="space-y-6">
-          <Skeleton className="h-[340px] w-full" />
-          <Skeleton className="h-[340px] w-full" />
-        </div>
+        <Skeleton className="h-[420px] w-full" />
       ) : (
-        <div className="space-y-8">
-          <SpendShareChart
-            data={totalChartData}
-            title="Gasto total em creators"
-          />
-          <SpendShareChart
-            data={recentesChartData}
-            title="Gasto em conteúdo recente de creators"
-          />
-        </div>
+        <CombinedSpendShareChart
+          data={combinedChartData}
+          title="Gasto em creators: total vs. recentes"
+        />
       )}
     </div>
   );
