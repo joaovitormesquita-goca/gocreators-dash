@@ -1,19 +1,16 @@
-CREATE OR REPLACE FUNCTION get_creator_metrics(p_brand_id bigint)
-RETURNS TABLE (
-  creator text,
-  month timestamptz,
-  spend_total numeric,
-  roas_total numeric,
-  ctr_total numeric,
-  spend_recentes numeric,
-  roas_recentes numeric,
-  ctr_recentes numeric
-)
-LANGUAGE sql STABLE
-AS $$
+drop function if exists "public"."get_creator_metrics"(p_brand_id bigint);
+
+set check_function_bodies = off;
+
+CREATE OR REPLACE FUNCTION public.get_creator_metrics(p_brand_id bigint)
+ RETURNS TABLE(creator text, month timestamp with time zone, group_id bigint, spend_total numeric, roas_total numeric, ctr_total numeric, spend_recentes numeric, roas_recentes numeric, ctr_recentes numeric)
+ LANGUAGE sql
+ STABLE
+AS $function$
   SELECT
     c.full_name AS creator,
     date_trunc('month', am.date) AS month,
+    cb.group_id,
     SUM(am.spend) AS spend_total,
     CASE WHEN SUM(am.spend) > 0
       THEN ROUND(SUM(am.revenue) / SUM(am.spend), 2) ELSE 0
@@ -46,6 +43,9 @@ AS $$
   JOIN creator_brands cb ON cb.id = cr.creator_brand_id
   JOIN creators c ON c.id = cb.creator_id
   WHERE cb.brand_id = p_brand_id
-  GROUP BY c.full_name, date_trunc('month', am.date)
+  GROUP BY c.full_name, date_trunc('month', am.date), cb.group_id
   ORDER BY c.full_name, month DESC;
-$$;
+$function$
+;
+
+

@@ -4,6 +4,7 @@ export const brandAssignmentSchema = z.object({
   brandId: z.string().min(1, "Selecione uma marca"),
   handles: z.string().min(1, "Informe ao menos um handle"),
   startDate: z.date({ error: "Selecione a data de início" }),
+  groupId: z.string().optional(),
 });
 
 export const createCreatorSchema = z.object({
@@ -21,6 +22,7 @@ export const editBrandAssignmentSchema = z.object({
   brandId: z.string().min(1, "Selecione uma marca"),
   handles: z.string().min(1, "Informe ao menos um handle"),
   startDate: z.date({ error: "Selecione a data de início" }),
+  groupId: z.string().optional(),
 });
 
 export const editCreatorSchema = z.object({
@@ -33,3 +35,12 @@ export const editCreatorSchema = z.object({
 });
 
 export type EditCreatorInput = z.infer<typeof editCreatorSchema>;
+
+// --- Bulk Group Assignment ---
+
+export const bulkAssignGroupSchema = z.object({
+  creatorBrandIds: z.array(z.number()).min(1, "Selecione ao menos um creator"),
+  groupId: z.number().nullable(),
+});
+
+export type BulkAssignGroupInput = z.infer<typeof bulkAssignGroupSchema>;

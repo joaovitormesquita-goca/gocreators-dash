@@ -27,15 +27,19 @@ import { toast } from "sonner";
 import { EditBrandDialog } from "@/components/edit-brand-dialog";
 import { EditAdAccountDialog } from "@/components/edit-ad-account-dialog";
 import { CreateAdAccountDialog } from "@/components/create-ad-account-dialog";
+import { CreateGroupDialog } from "@/components/create-group-dialog";
+import { EditGroupDialog } from "@/components/edit-group-dialog";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { BackfillDialog } from "@/components/backfill-dialog";
 import {
   deleteBrand,
   deleteAdAccount,
+  deleteGroup,
 } from "@/app/dashboard/brands/actions";
 import type {
   BrandWithAdAccounts,
   AdAccount,
+  CreatorGroup,
 } from "@/app/dashboard/brands/actions";
 
 type SortDir = "asc" | "desc";
@@ -53,6 +57,10 @@ export function BrandsTable({ brands }: { brands: BrandWithAdAccounts[] }) {
   const [deletingBrand, setDeletingBrand] = useState<BrandWithAdAccounts | null>(null);
   const [deletingAdAccount, setDeletingAdAccount] = useState<AdAccount | null>(null);
   const [isDeleting, startDeleteTransition] = useTransition();
+
+  // Group state
+  const [editingGroup, setEditingGroup] = useState<CreatorGroup | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState<CreatorGroup | null>(null);
 
   // Backfill state
   const [backfillAdAccount, setBackfillAdAccount] = useState<AdAccount | null>(null);
@@ -80,6 +88,20 @@ export function BrandsTable({ brands }: { brands: BrandWithAdAccounts[] }) {
         toast.success("Marca excluída com sucesso!");
         setDeletingBrand(null);
         if (expandedBrandId === deletingBrand.id) setExpandedBrandId(null);
+        router.refresh();
+      } else {
+        toast.error(result.error);
+      }
+    });
+  }
+
+  function handleDeleteGroup() {
+    if (!deletingGroup) return;
+    startDeleteTransition(async () => {
+      const result = await deleteGroup(deletingGroup.id);
+      if (result.success) {
+        toast.success("Grupo excluído com sucesso!");
+        setDeletingGroup(null);
         router.refresh();
       } else {
         toast.error(result.error);
@@ -149,6 +171,8 @@ export function BrandsTable({ brands }: { brands: BrandWithAdAccounts[] }) {
                     onEditAdAccount={setEditingAdAccount}
                     onDeleteAdAccount={setDeletingAdAccount}
                     onBackfillAdAccount={setBackfillAdAccount}
+                    onEditGroup={setEditingGroup}
+                    onDeleteGroup={setDeletingGroup}
                   />
                 );
               })
@@ -224,6 +248,33 @@ export function BrandsTable({ brands }: { brands: BrandWithAdAccounts[] }) {
           }}
         />
       )}
+
+      {/* Edit Group Dialog */}
+      {editingGroup && (
+        <EditGroupDialog
+          group={editingGroup}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setEditingGroup(null);
+          }}
+        />
+      )}
+
+      {/* Delete Group Confirmation */}
+      <DeleteConfirmDialog
+        open={deletingGroup !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeletingGroup(null);
+        }}
+        title="Excluir grupo"
+        description={
+          deletingGroup
+            ? `Esta ação irá excluir o grupo "${deletingGroup.name}". Esta ação não pode ser desfeita.`
+            : ""
+        }
+        onConfirm={handleDeleteGroup}
+        loading={isDeleting}
+      />
     </>
   );
 }
@@ -237,6 +288,8 @@ function BrandRow({
   onEditAdAccount,
   onDeleteAdAccount,
   onBackfillAdAccount,
+  onEditGroup,
+  onDeleteGroup,
 }: {
   brand: BrandWithAdAccounts;
   isExpanded: boolean;
@@ -246,6 +299,8 @@ function BrandRow({
   onEditAdAccount: (aa: AdAccount) => void;
   onDeleteAdAccount: (aa: AdAccount) => void;
   onBackfillAdAccount: (aa: AdAccount) => void;
+  onEditGroup: (g: CreatorGroup) => void;
+  onDeleteGroup: (g: CreatorGroup) => void;
 }) {
   return (
     <>
@@ -287,69 +342,126 @@ function BrandRow({
       {isExpanded && (
         <TableRow>
           <TableCell colSpan={4} className="bg-muted/30 p-4">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium text-muted-foreground">
-                  Contas de Anúncio
-                </h4>
-                <CreateAdAccountDialog brandId={brand.id} />
+            <div className="space-y-6">
+              {/* Ad Accounts Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Contas de Anúncio
+                  </h4>
+                  <CreateAdAccountDialog brandId={brand.id} />
+                </div>
+
+                {brand.ad_accounts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2 text-center border border-dashed rounded-md">
+                    Nenhuma conta de anúncio vinculada.
+                  </p>
+                ) : (
+                  <div className="rounded-md border bg-background">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">Nome</TableHead>
+                          <TableHead className="whitespace-nowrap">Meta Account ID</TableHead>
+                          <TableHead className="whitespace-nowrap w-[100px]">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {brand.ad_accounts.map((aa) => (
+                          <TableRow key={aa.id}>
+                            <TableCell className="whitespace-nowrap">
+                              {aa.name}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap font-mono text-sm">
+                              {aa.meta_account_id}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onBackfillAdAccount(aa)}
+                                  title="Importar historico"
+                                >
+                                  <History className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onEditAdAccount(aa)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onDeleteAdAccount(aa)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
               </div>
 
-              {brand.ad_accounts.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-2 text-center border border-dashed rounded-md">
-                  Nenhuma conta de anúncio vinculada.
-                </p>
-              ) : (
-                <div className="rounded-md border bg-background">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="whitespace-nowrap">Nome</TableHead>
-                        <TableHead className="whitespace-nowrap">Meta Account ID</TableHead>
-                        <TableHead className="whitespace-nowrap w-[100px]">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {brand.ad_accounts.map((aa) => (
-                        <TableRow key={aa.id}>
-                          <TableCell className="whitespace-nowrap">
-                            {aa.name}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap font-mono text-sm">
-                            {aa.meta_account_id}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onBackfillAdAccount(aa)}
-                                title="Importar historico"
-                              >
-                                <History className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onEditAdAccount(aa)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => onDeleteAdAccount(aa)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+              {/* Groups Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium text-muted-foreground">
+                    Grupos de Creators
+                  </h4>
+                  <CreateGroupDialog brandId={brand.id} />
                 </div>
-              )}
+
+                {brand.groups.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2 text-center border border-dashed rounded-md">
+                    Nenhum grupo cadastrado.
+                  </p>
+                ) : (
+                  <div className="rounded-md border bg-background">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="whitespace-nowrap">Nome</TableHead>
+                          <TableHead className="whitespace-nowrap w-[100px]">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {brand.groups.map((g) => (
+                          <TableRow key={g.id}>
+                            <TableCell className="whitespace-nowrap">
+                              {g.name}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onEditGroup(g)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onDeleteGroup(g)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </div>
           </TableCell>
         </TableRow>

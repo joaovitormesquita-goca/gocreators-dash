@@ -11,6 +11,7 @@ export async function getBrands() {
 export type CreatorMetric = {
   creator: string;
   month: string;
+  group_id: number | null;
   spend_total: number;
   roas_total: number;
   ctr_total: number;
@@ -18,6 +19,26 @@ export type CreatorMetric = {
   roas_recentes: number;
   ctr_recentes: number;
 };
+
+export type GroupOption = {
+  id: number;
+  name: string;
+};
+
+export async function getGroupsByBrand(
+  brandId: number,
+): Promise<GroupOption[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("creator_groups")
+    .select("id, name")
+    .eq("brand_id", brandId)
+    .order("name");
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
 
 export async function syncAdMetrics() {
   const supabase = await createClient();

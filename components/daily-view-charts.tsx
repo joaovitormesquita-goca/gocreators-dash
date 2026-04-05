@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useEffect, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { format, subDays, startOfMonth, subMonths, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -25,7 +25,7 @@ import {
   SpendShareChart,
   type SpendShareDataPoint,
 } from "@/components/spend-share-chart";
-import { getDailySpendView, getCreatorsByBrand, type DailySpendRow } from "@/app/dashboard/daily-view/actions";
+import { getDailySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, type DailySpendRow, type GroupOption } from "@/app/dashboard/daily-view/actions";
 
 type Brand = { id: number; name: string };
 
@@ -111,6 +111,16 @@ export function DailyViewCharts({
     return defaultPreset.getRange();
   });
   const [data, setData] = useState<DailySpendRow[]>(initialData);
+  const [groups, setGroups] = useState<GroupOption[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+
+  useEffect(() => {
+    if (selectedBrandId) {
+      getGroupsByBrand(selectedBrandId).then(setGroups);
+    } else {
+      setGroups([]);
+    }
+  }, [selectedBrandId]);
 
   const fetchData = useCallback(
     (brandId: number, creatorIds: number[], range: { from: Date; to: Date }) => {
@@ -131,6 +141,7 @@ export function DailyViewCharts({
   function handleBrandChange(value: string) {
     const brandId = Number(value);
     setSelectedBrandId(brandId);
+    setSelectedGroupId("all");
     router.push(`/dashboard/daily-view?brand=${brandId}`);
     startTransition(async () => {
       const newCreators = await getCreatorsByBrand(brandId);
@@ -139,6 +150,27 @@ export function DailyViewCharts({
       setSelectedCreatorIds(allIds);
       const rows = await getDailySpendView({
         brandId,
+        startDate: format(dateRange.from, "yyyy-MM-dd"),
+        endDate: format(dateRange.to, "yyyy-MM-dd"),
+      });
+      setData(rows);
+    });
+  }
+
+  function handleGroupChange(value: string) {
+    setSelectedGroupId(value);
+    if (!selectedBrandId) return;
+    startTransition(async () => {
+      const groupId = value === "all" ? null : value === "none" ? 0 : Number(value);
+      const filteredCreators = groupId === null
+        ? await getCreatorsByBrand(selectedBrandId)
+        : await getCreatorsByBrandAndGroup(selectedBrandId, groupId);
+      setCreators(filteredCreators);
+      const allIds = filteredCreators.map((c) => c.id);
+      setSelectedCreatorIds(allIds);
+      const rows = await getDailySpendView({
+        brandId: selectedBrandId,
+        creatorIds: allIds.length > 0 ? allIds : undefined,
         startDate: format(dateRange.from, "yyyy-MM-dd"),
         endDate: format(dateRange.to, "yyyy-MM-dd"),
       });
@@ -181,6 +213,26 @@ export function DailyViewCharts({
             ))}
           </SelectContent>
         </Select>
+
+        {groups.length > 0 && (
+          <Select
+            value={selectedGroupId}
+            onValueChange={handleGroupChange}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Todos os grupos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os grupos</SelectItem>
+              <SelectItem value="none">Sem grupo</SelectItem>
+              {groups.map((g) => (
+                <SelectItem key={g.id} value={g.id.toString()}>
+                  {g.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <CreatorMultiSelect
           creators={creators}
