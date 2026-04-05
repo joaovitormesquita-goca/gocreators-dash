@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, TableProperties, BarChart3, CalendarDays, UserPlus, Building2, History } from "lucide-react";
+import { LayoutDashboard, TableProperties, BarChart3, CalendarDays, UserPlus, Building2, History, DollarSign } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -55,6 +55,11 @@ const navSections = [
         title: "Marcas",
         href: "/dashboard/brands",
         icon: Building2,
+      },
+      {
+        title: "Central de Custos",
+        href: "/dashboard/costs",
+        icon: DollarSign,
       },
       {
         title: "Sincronização",
