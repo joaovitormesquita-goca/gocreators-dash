@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,7 +48,9 @@ import {
 } from "@/lib/schemas/creator";
 import {
   updateCreator,
+  getGroupsByBrand,
   type CreatorWithBrands,
+  type GroupOption,
 } from "@/app/dashboard/creators/list/actions";
 
 type Brand = { id: number; name: string };
@@ -63,6 +65,7 @@ function buildDefaults(creator: CreatorWithBrands): EditCreatorInput {
       brandId: b.id.toString(),
       handles: b.handles.join(", "),
       startDate: b.start_date ? new Date(b.start_date) : new Date(),
+      groupId: b.group_id?.toString(),
     })),
   };
 }
@@ -91,9 +94,26 @@ export function EditCreatorDialog({
     name: "brandAssignments",
   });
 
+  const [groupsByBrand, setGroupsByBrand] = useState<Record<string, GroupOption[]>>({});
+
+  const fetchGroups = useCallback(async (brandId: string) => {
+    if (!brandId || groupsByBrand[brandId]) return;
+    const groups = await getGroupsByBrand(Number(brandId));
+    setGroupsByBrand((prev) => ({ ...prev, [brandId]: groups }));
+  }, [groupsByBrand]);
+
   // Reset form when a different creator is selected
   useEffect(() => {
     form.reset(buildDefaults(creator));
+    // Fetch groups for all existing brand assignments
+    setGroupsByBrand({});
+    creator.brands.forEach((b) => {
+      if (b.id) {
+        getGroupsByBrand(b.id).then((groups) => {
+          setGroupsByBrand((prev) => ({ ...prev, [b.id.toString()]: groups }));
+        });
+      }
+    });
   }, [creator, form]);
 
   const selectedBrandIds = form
@@ -222,7 +242,7 @@ export function EditCreatorDialog({
                       </Button>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <FormField
                         control={form.control}
                         name={`brandAssignments.${index}.brandId`}
@@ -230,7 +250,11 @@ export function EditCreatorDialog({
                           <FormItem>
                             <FormLabel>Marca</FormLabel>
                             <Select
-                              onValueChange={selectField.onChange}
+                              onValueChange={(val) => {
+                                selectField.onChange(val);
+                                form.setValue(`brandAssignments.${index}.groupId`, undefined);
+                                fetchGroups(val);
+                              }}
                               value={selectField.value}
                               disabled={isExisting}
                             >
@@ -315,6 +339,36 @@ export function EditCreatorDialog({
                           </FormItem>
                         )}
                       />
+
+                      {selectedBrandIds[index] && (groupsByBrand[selectedBrandIds[index]]?.length ?? 0) > 0 && (
+                        <FormField
+                          control={form.control}
+                          name={`brandAssignments.${index}.groupId`}
+                          render={({ field: groupField }) => (
+                            <FormItem>
+                              <FormLabel>Grupo</FormLabel>
+                              <Select
+                                onValueChange={groupField.onChange}
+                                value={groupField.value ?? ""}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sem grupo" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {(groupsByBrand[selectedBrandIds[index]] ?? []).map((g) => (
+                                    <SelectItem key={g.id} value={g.id.toString()}>
+                                      {g.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                     </div>
                   </div>
                 );

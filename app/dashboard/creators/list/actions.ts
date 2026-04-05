@@ -13,6 +13,10 @@ import {
   type BulkImportInput,
   type BulkImportResult,
 } from "@/lib/schemas/csv-import";
+import {
+  bulkAssignGroupSchema,
+  type BulkAssignGroupInput,
+} from "@/lib/schemas/creator";
 
 function splitHandles(raw: string): string[] {
   return raw.split(",").map((h) => h.trim()).filter(Boolean);
@@ -24,6 +28,7 @@ export type CreatorBrand = {
   name: string;
   handles: string[];
   start_date: string | null;
+  group_id: number | null;
 };
 
 export type CreatorWithBrands = {
@@ -48,6 +53,7 @@ export async function getCreatorsWithBrands(): Promise<CreatorWithBrands[]> {
         brand_id,
         handles,
         start_date,
+        group_id,
         brands ( id, name )
       )
     `,
@@ -68,6 +74,7 @@ export async function getCreatorsWithBrands(): Promise<CreatorWithBrands[]> {
         name: brand?.name ?? "",
         handles: (cb.handles as string[]) ?? [],
         start_date: cb.start_date as string | null,
+        group_id: (cb.group_id as number | null) ?? null,
       };
     }),
   }));
@@ -121,6 +128,7 @@ export async function createCreatorWithBrands(
     brand_id: Number(ba.brandId),
     handles: splitHandles(ba.handles),
     start_date: ba.startDate.toISOString().split("T")[0],
+    group_id: ba.groupId ? Number(ba.groupId) : null,
   }));
 
   const { error: brandsError } = await supabase
@@ -193,6 +201,7 @@ export async function updateCreator(
       .update({
         handles: splitHandles(ba.handles),
         start_date: ba.startDate.toISOString().split("T")[0],
+        group_id: ba.groupId ? Number(ba.groupId) : null,
       })
       .eq("id", ba.assignmentId!);
 
@@ -209,6 +218,7 @@ export async function updateCreator(
       brand_id: Number(ba.brandId),
       handles: ba.handles.split(",").map((h) => h.trim()).filter(Boolean),
       start_date: ba.startDate.toISOString().split("T")[0],
+      group_id: ba.groupId ? Number(ba.groupId) : null,
     }));
 
   if (toInsert.length > 0) {
@@ -326,4 +336,49 @@ export async function bulkImportCreators(
 
   revalidatePath("/dashboard/creators/list");
   return { success: true, createdCount, linkedCount, handleAddedCount, errors };
+}
+
+// --- Creator Group actions ---
+
+export type GroupOption = {
+  id: number;
+  name: string;
+};
+
+export async function getGroupsByBrand(
+  brandId: number,
+): Promise<GroupOption[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("creator_groups")
+    .select("id, name")
+    .eq("brand_id", brandId)
+    .order("name");
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function bulkUpdateCreatorBrandGroup(
+  input: BulkAssignGroupInput,
+): Promise<{ success: true; count: number } | { success: false; error: string }> {
+  const parsed = bulkAssignGroupSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("creator_brands")
+    .update({ group_id: parsed.data.groupId })
+    .in("id", parsed.data.creatorBrandIds);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/dashboard/creators/list");
+  return { success: true, count: parsed.data.creatorBrandIds.length };
 }

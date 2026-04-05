@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,7 +47,11 @@ import {
   createCreatorSchema,
   type CreateCreatorInput,
 } from "@/lib/schemas/creator";
-import { createCreatorWithBrands } from "@/app/dashboard/creators/list/actions";
+import {
+  createCreatorWithBrands,
+  getGroupsByBrand,
+  type GroupOption,
+} from "@/app/dashboard/creators/list/actions";
 
 type Brand = { id: number; name: string };
 
@@ -69,6 +73,14 @@ export function CreateCreatorDialog({ brands }: { brands: Brand[] }) {
     control: form.control,
     name: "brandAssignments",
   });
+
+  const [groupsByBrand, setGroupsByBrand] = useState<Record<string, GroupOption[]>>({});
+
+  const fetchGroups = useCallback(async (brandId: string) => {
+    if (!brandId || groupsByBrand[brandId]) return;
+    const groups = await getGroupsByBrand(Number(brandId));
+    setGroupsByBrand((prev) => ({ ...prev, [brandId]: groups }));
+  }, [groupsByBrand]);
 
   const selectedBrandIds = form
     .watch("brandAssignments")
@@ -208,7 +220,7 @@ export function CreateCreatorDialog({ brands }: { brands: Brand[] }) {
                       </Button>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <FormField
                         control={form.control}
                         name={`brandAssignments.${index}.brandId`}
@@ -216,7 +228,11 @@ export function CreateCreatorDialog({ brands }: { brands: Brand[] }) {
                           <FormItem>
                             <FormLabel>Marca</FormLabel>
                             <Select
-                              onValueChange={selectField.onChange}
+                              onValueChange={(val) => {
+                                selectField.onChange(val);
+                                form.setValue(`brandAssignments.${index}.groupId`, undefined);
+                                fetchGroups(val);
+                              }}
                               value={selectField.value}
                             >
                               <FormControl>
@@ -300,6 +316,36 @@ export function CreateCreatorDialog({ brands }: { brands: Brand[] }) {
                           </FormItem>
                         )}
                       />
+
+                      {selectedBrandIds[index] && (groupsByBrand[selectedBrandIds[index]]?.length ?? 0) > 0 && (
+                        <FormField
+                          control={form.control}
+                          name={`brandAssignments.${index}.groupId`}
+                          render={({ field: groupField }) => (
+                            <FormItem>
+                              <FormLabel>Grupo</FormLabel>
+                              <Select
+                                onValueChange={groupField.onChange}
+                                value={groupField.value ?? ""}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sem grupo" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {(groupsByBrand[selectedBrandIds[index]] ?? []).map((g) => (
+                                    <SelectItem key={g.id} value={g.id.toString()}>
+                                      {g.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
                     </div>
                   </div>
                 );
