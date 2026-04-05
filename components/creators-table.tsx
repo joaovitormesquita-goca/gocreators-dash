@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useEffect, useTransition, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Table,
@@ -20,7 +20,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getCreatorMetrics,
+  getGroupsByBrand,
   type CreatorMetric,
+  type GroupOption,
 } from "@/app/dashboard/creators/actions";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { InlineEditCost } from "@/components/inline-edit-cost";
@@ -68,10 +70,20 @@ export function CreatorsTable({
   const [sortKey, setSortKey] = useState<SortKey>("creator");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+  const [groups, setGroups] = useState<GroupOption[]>([]);
 
   const selectedBrandId = searchParams.get("brand")
     ? Number(searchParams.get("brand"))
     : initialBrandId;
+
+  useEffect(() => {
+    if (selectedBrandId) {
+      getGroupsByBrand(selectedBrandId).then(setGroups);
+    } else {
+      setGroups([]);
+    }
+  }, [selectedBrandId]);
 
   const availableMonths = useMemo(() => {
     const unique = Array.from(new Set(metrics.map((m) => m.month)));
@@ -81,6 +93,7 @@ export function CreatorsTable({
   function handleBrandChange(value: string) {
     router.push(`/dashboard/creators?brand=${value}`);
     setSelectedMonth("all");
+    setSelectedGroupId("all");
     startTransition(async () => {
       const data = await getCreatorMetrics(Number(value));
       setMetrics(data);
@@ -103,10 +116,18 @@ export function CreatorsTable({
   }
 
   const sorted = useMemo(() => {
-    const filtered =
-      selectedMonth === "all"
-        ? metrics
-        : metrics.filter((m) => m.month === selectedMonth);
+    let filtered = selectedMonth === "all"
+      ? metrics
+      : metrics.filter((m) => m.month === selectedMonth);
+
+    if (selectedGroupId !== "all") {
+      if (selectedGroupId === "none") {
+        filtered = filtered.filter((m) => m.group_id == null);
+      } else {
+        filtered = filtered.filter((m) => m.group_id === Number(selectedGroupId));
+      }
+    }
+
     return [...filtered].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
@@ -116,7 +137,7 @@ export function CreatorsTable({
       const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [metrics, sortKey, sortDir, selectedMonth]);
+  }, [metrics, sortKey, sortDir, selectedMonth, selectedGroupId]);
 
   function SortIcon({ column }: { column: SortKey }) {
     if (sortKey !== column) return <ArrowUpDown className="ml-1 h-3 w-3 inline" />;
@@ -178,6 +199,29 @@ export function CreatorsTable({
             ))}
           </SelectContent>
         </Select>
+
+        {groups.length > 0 && (
+          <>
+            <label className="text-sm font-medium text-muted-foreground">Grupo:</label>
+            <Select
+              value={selectedGroupId}
+              onValueChange={setSelectedGroupId}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Todos os grupos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os grupos</SelectItem>
+                <SelectItem value="none">Sem grupo</SelectItem>
+                {groups.map((g) => (
+                  <SelectItem key={g.id} value={g.id.toString()}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
 
         <label className="text-sm font-medium text-muted-foreground">Mês:</label>
         <Select
