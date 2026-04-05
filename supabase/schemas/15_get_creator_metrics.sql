@@ -1,18 +1,21 @@
 CREATE OR REPLACE FUNCTION get_creator_metrics(p_brand_id bigint)
 RETURNS TABLE (
   creator text,
+  creator_brand_id bigint,
   month timestamptz,
   spend_total numeric,
   roas_total numeric,
   ctr_total numeric,
   spend_recentes numeric,
   roas_recentes numeric,
-  ctr_recentes numeric
+  ctr_recentes numeric,
+  cost numeric
 )
 LANGUAGE sql STABLE
 AS $$
   SELECT
     c.full_name AS creator,
+    cb.id AS creator_brand_id,
     date_trunc('month', am.date) AS month,
     SUM(am.spend) AS spend_total,
     CASE WHEN SUM(am.spend) > 0
@@ -40,12 +43,16 @@ AS $$
         / SUM(am.impressions) FILTER (WHERE cr.created_time >= date_trunc('month', am.date) - INTERVAL '1 month'
           AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month') * 100, 2)
       ELSE 0
-    END AS ctr_recentes
+    END AS ctr_recentes,
+    cc.cost AS cost
   FROM ad_metrics am
   JOIN creatives cr ON cr.id = am.creative_id
   JOIN creator_brands cb ON cb.id = cr.creator_brand_id
   JOIN creators c ON c.id = cb.creator_id
+  LEFT JOIN creator_costs cc
+    ON cc.creator_brand_id = cb.id
+    AND cc.month = date_trunc('month', am.date)::date
   WHERE cb.brand_id = p_brand_id
-  GROUP BY c.full_name, date_trunc('month', am.date)
+  GROUP BY c.full_name, cb.id, date_trunc('month', am.date), cc.cost
   ORDER BY c.full_name, month DESC;
 $$;

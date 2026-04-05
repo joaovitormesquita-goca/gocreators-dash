@@ -18,8 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getCreatorMetrics, type CreatorMetric } from "@/app/dashboard/creators/actions";
+import {
+  getCreatorMetrics,
+  type CreatorMetric,
+} from "@/app/dashboard/creators/actions";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { InlineEditCost } from "@/components/inline-edit-cost";
 
 type Brand = { id: number; name: string };
 type SortKey = keyof CreatorMetric;
@@ -92,6 +96,12 @@ export function CreatorsTable({
     }
   }
 
+  function handleCostSaved(index: number, newCost: number) {
+    setMetrics((prev) =>
+      prev.map((m, i) => (i === index ? { ...m, cost: newCost } : m)),
+    );
+  }
+
   const sorted = useMemo(() => {
     const filtered =
       selectedMonth === "all"
@@ -117,20 +127,41 @@ export function CreatorsTable({
     );
   }
 
-  const columns: { key: SortKey; label: string; format: (v: CreatorMetric) => string }[] = [
-    { key: "month", label: "Mês/Ano", format: (r) => formatMonth(r.month) },
-    { key: "creator", label: "Creator", format: (r) => r.creator },
-    { key: "spend_total", label: "Gasto", format: (r) => formatCurrency(r.spend_total) },
-    { key: "roas_total", label: "ROAS", format: (r) => formatRoas(r.roas_total) },
-    { key: "ctr_total", label: "CTR", format: (r) => formatCtr(r.ctr_total) },
-    { key: "spend_recentes", label: "Gasto Recentes", format: (r) => formatCurrency(r.spend_recentes) },
-    { key: "roas_recentes", label: "ROAS Recentes", format: (r) => formatRoas(r.roas_recentes) },
-    { key: "ctr_recentes", label: "CTR Recentes", format: (r) => formatCtr(r.ctr_recentes) },
+  const columns: { key: SortKey; label: string }[] = [
+    { key: "month", label: "Mês/Ano" },
+    { key: "creator", label: "Creator" },
+    { key: "cost", label: "Custo" },
+    { key: "spend_total", label: "Gasto" },
+    { key: "roas_total", label: "ROAS" },
+    { key: "ctr_total", label: "CTR" },
+    { key: "spend_recentes", label: "Gasto Recentes" },
+    { key: "roas_recentes", label: "ROAS Recentes" },
+    { key: "ctr_recentes", label: "CTR Recentes" },
   ];
+
+  function formatCell(row: CreatorMetric, key: SortKey) {
+    switch (key) {
+      case "month":
+        return formatMonth(row.month);
+      case "creator":
+        return row.creator;
+      case "spend_total":
+      case "spend_recentes":
+        return formatCurrency(row[key]);
+      case "roas_total":
+      case "roas_recentes":
+        return formatRoas(row[key]);
+      case "ctr_total":
+      case "ctr_recentes":
+        return formatCtr(row[key]);
+      default:
+        return String(row[key] ?? "");
+    }
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <label className="text-sm font-medium text-muted-foreground">Brand:</label>
         <Select
           value={selectedBrandId?.toString() ?? ""}
@@ -208,7 +239,23 @@ export function CreatorsTable({
                   <TableRow key={`${row.creator}-${row.month}-${i}`}>
                     {columns.map((col) => (
                       <TableCell key={col.key} className="whitespace-nowrap">
-                        {col.format(row)}
+                        {col.key === "cost" ? (
+                          <InlineEditCost
+                            value={row.cost}
+                            creatorBrandId={row.creator_brand_id}
+                            month={row.month}
+                            onSaved={(newCost) => {
+                              const originalIndex = metrics.findIndex(
+                                (m) =>
+                                  m.creator_brand_id === row.creator_brand_id &&
+                                  m.month === row.month,
+                              );
+                              if (originalIndex !== -1) handleCostSaved(originalIndex, newCost);
+                            }}
+                          />
+                        ) : (
+                          formatCell(row, col.key)
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
