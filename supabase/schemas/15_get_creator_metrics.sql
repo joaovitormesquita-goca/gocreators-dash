@@ -9,7 +9,8 @@ RETURNS TABLE (
   spend_recentes numeric,
   roas_recentes numeric,
   ctr_recentes numeric,
-  cost numeric
+  cost numeric,
+  yearly_spend numeric
 )
 LANGUAGE sql STABLE
 AS $$
@@ -44,7 +45,12 @@ AS $$
           AND cr.created_time < date_trunc('month', am.date) + INTERVAL '1 month') * 100, 2)
       ELSE 0
     END AS ctr_recentes,
-    cc.cost AS cost
+    cc.cost AS cost,
+    SUM(SUM(am.spend)) OVER (
+      PARTITION BY cb.id, EXTRACT(YEAR FROM date_trunc('month', am.date))
+      ORDER BY date_trunc('month', am.date)
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS yearly_spend
   FROM ad_metrics am
   JOIN creatives cr ON cr.id = am.creative_id
   JOIN creator_brands cb ON cb.id = cr.creator_brand_id
