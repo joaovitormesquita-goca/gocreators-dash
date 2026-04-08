@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceLine,
   XAxis,
   YAxis,
 } from "recharts";
@@ -26,6 +27,7 @@ export type SpendShareDataPoint = {
 interface SpendShareChartProps {
   data: SpendShareDataPoint[];
   title: string;
+  goalValue?: number;
 }
 
 const chartConfig = {
@@ -36,6 +38,10 @@ const chartConfig = {
   sharePercent: {
     label: "Share %",
     color: "hsl(var(--chart-2))",
+  },
+  goal: {
+    label: "Meta",
+    color: "#ef4444",
   },
 } satisfies ChartConfig;
 
@@ -52,7 +58,7 @@ function formatPercent(value: number) {
   return `${value.toFixed(1)}%`;
 }
 
-export function SpendShareChart({ data, title }: SpendShareChartProps) {
+export function SpendShareChart({ data, title, goalValue }: SpendShareChartProps) {
   if (data.length === 0) {
     return (
       <div className="space-y-3">
@@ -144,6 +150,21 @@ export function SpendShareChart({ data, title }: SpendShareChartProps) {
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}
           />
+          {goalValue !== undefined && (
+            <ReferenceLine
+              yAxisId="right"
+              y={goalValue}
+              stroke="#ef4444"
+              strokeDasharray="6 4"
+              strokeWidth={2}
+              label={{
+                value: `Meta: ${goalValue}%`,
+                position: "right",
+                fill: "#ef4444",
+                fontSize: 11,
+              }}
+            />
+          )}
         </ComposedChart>
       </ChartContainer>
     </div>
