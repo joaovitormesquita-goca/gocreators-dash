@@ -152,6 +152,7 @@ export function CreatorsTable({
     { key: "month", label: "Mês/Ano" },
     { key: "creator", label: "Creator" },
     { key: "cost", label: "Custo" },
+    { key: "yearly_spend", label: "Investimento Ano" },
     { key: "spend_total", label: "Gasto" },
     { key: "roas_total", label: "ROAS" },
     { key: "ctr_total", label: "CTR" },
@@ -168,6 +169,7 @@ export function CreatorsTable({
         return row.creator;
       case "spend_total":
       case "spend_recentes":
+      case "yearly_spend":
         return formatCurrency(row[key]);
       case "roas_total":
       case "roas_recentes":
