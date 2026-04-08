@@ -88,3 +88,27 @@ export async function getDailySpendView(params: {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+export type BrandGoalRow = {
+  metric: "share_total" | "share_recent";
+  month: string;
+  value: number;
+};
+
+export async function getGoalsForBrand(
+  brandId: number,
+  startDate: string,
+  endDate: string,
+): Promise<BrandGoalRow[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("brand_goals")
+    .select("metric, month, value")
+    .eq("brand_id", brandId)
+    .gte("month", startDate)
+    .lte("month", endDate);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as BrandGoalRow[];
+}
