@@ -25,7 +25,7 @@ import {
   SpendShareChart,
   type SpendShareDataPoint,
 } from "@/components/spend-share-chart";
-import { getMonthlySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, type MonthlySpendRow, type GroupOption } from "@/app/dashboard/monthly-view/actions";
+import { getMonthlySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, getGoalsForBrand, type MonthlySpendRow, type GroupOption, type BrandGoalRow } from "@/app/dashboard/monthly-view/actions";
 
 type Brand = { id: number; name: string };
 
@@ -77,6 +77,16 @@ function toChartData(
   });
 }
 
+function getGoalValue(
+  goals: BrandGoalRow[],
+  metric: "share_total" | "share_recent",
+): number | undefined {
+  const metricGoals = goals
+    .filter((g) => g.metric === metric)
+    .sort((a, b) => b.month.localeCompare(a.month));
+  return metricGoals.length > 0 ? Number(metricGoals[0].value) : undefined;
+}
+
 export function MonthlyViewCharts({
   brands,
   initialBrandId,
@@ -101,6 +111,7 @@ export function MonthlyViewCharts({
     return defaultPreset.getRange();
   });
   const [data, setData] = useState<MonthlySpendRow[]>(initialData);
+  const [goals, setGoals] = useState<BrandGoalRow[]>([]);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
 
@@ -116,13 +127,21 @@ export function MonthlyViewCharts({
     (brandId: number, creatorIds: number[], range: { from: Date; to: Date }) => {
       startTransition(async () => {
         const allSelected = creatorIds.length === 0;
-        const rows = await getMonthlySpendView({
-          brandId,
-          creatorIds: allSelected ? undefined : creatorIds,
-          startDate: format(range.from, "yyyy-MM-dd"),
-          endDate: format(range.to, "yyyy-MM-dd"),
-        });
+        const [rows, brandGoals] = await Promise.all([
+          getMonthlySpendView({
+            brandId,
+            creatorIds: allSelected ? undefined : creatorIds,
+            startDate: format(range.from, "yyyy-MM-dd"),
+            endDate: format(range.to, "yyyy-MM-dd"),
+          }),
+          getGoalsForBrand(
+            brandId,
+            format(range.from, "yyyy-MM-01"),
+            format(range.to, "yyyy-MM-01"),
+          ),
+        ]);
         setData(rows);
+        setGoals(brandGoals);
       });
     },
     [],
@@ -138,12 +157,20 @@ export function MonthlyViewCharts({
       setCreators(newCreators);
       const allIds = newCreators.map((c) => c.id);
       setSelectedCreatorIds(allIds);
-      const rows = await getMonthlySpendView({
-        brandId,
-        startDate: format(dateRange.from, "yyyy-MM-dd"),
-        endDate: format(dateRange.to, "yyyy-MM-dd"),
-      });
+      const [rows, brandGoals] = await Promise.all([
+        getMonthlySpendView({
+          brandId,
+          startDate: format(dateRange.from, "yyyy-MM-dd"),
+          endDate: format(dateRange.to, "yyyy-MM-dd"),
+        }),
+        getGoalsForBrand(
+          brandId,
+          format(dateRange.from, "yyyy-MM-01"),
+          format(dateRange.to, "yyyy-MM-01"),
+        ),
+      ]);
       setData(rows);
+      setGoals(brandGoals);
     });
   }
 
@@ -158,13 +185,21 @@ export function MonthlyViewCharts({
       setCreators(filteredCreators);
       const allIds = filteredCreators.map((c) => c.id);
       setSelectedCreatorIds(allIds);
-      const rows = await getMonthlySpendView({
-        brandId: selectedBrandId,
-        creatorIds: allIds.length > 0 ? allIds : undefined,
-        startDate: format(dateRange.from, "yyyy-MM-dd"),
-        endDate: format(dateRange.to, "yyyy-MM-dd"),
-      });
+      const [rows, brandGoals] = await Promise.all([
+        getMonthlySpendView({
+          brandId: selectedBrandId,
+          creatorIds: allIds.length > 0 ? allIds : undefined,
+          startDate: format(dateRange.from, "yyyy-MM-dd"),
+          endDate: format(dateRange.to, "yyyy-MM-dd"),
+        }),
+        getGoalsForBrand(
+          selectedBrandId,
+          format(dateRange.from, "yyyy-MM-01"),
+          format(dateRange.to, "yyyy-MM-01"),
+        ),
+      ]);
       setData(rows);
+      setGoals(brandGoals);
     });
   }
 
@@ -249,10 +284,12 @@ export function MonthlyViewCharts({
           <SpendShareChart
             data={totalChartData}
             title="Gasto total em creators"
+            goalValue={getGoalValue(goals, "share_total")}
           />
           <SpendShareChart
             data={recentesChartData}
             title="Gasto em conteúdo recente de creators"
+            goalValue={getGoalValue(goals, "share_recent")}
           />
         </div>
       )}
