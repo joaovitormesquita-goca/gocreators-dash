@@ -69,7 +69,10 @@ export function BrandGoalsSection({ brands }: { brands: Brand[] }) {
 
   useEffect(() => {
     if (selectedBrandId) {
-      getBrandGoals(selectedBrandId).then(setGoals);
+      getBrandGoals(selectedBrandId).then(setGoals).catch(() => {
+        toast.error("Erro ao carregar metas");
+        setGoals([]);
+      });
     } else {
       setGoals([]);
     }

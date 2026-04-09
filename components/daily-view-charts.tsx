@@ -73,28 +73,25 @@ const dailyPresets: DatePreset[] = [
 function toChartData(
   rows: DailySpendRow[],
   spendKey: "spend_total" | "spend_recentes",
+  goals: BrandGoalRow[],
+  metric: "share_total" | "share_recent",
 ): SpendShareDataPoint[] {
   return rows.map((row) => {
     const spend = Number(row[spendKey]) || 0;
     const brandTotal = Number(row.brand_total_spend) || 0;
     const sharePercent = brandTotal > 0 ? (spend / brandTotal) * 100 : 0;
     const date = new Date(row.day + "T00:00:00");
+    const goalMonth = row.day.slice(0, 7) + "-01";
+    const matchingGoal = goals.find(
+      (g) => g.metric === metric && g.month === goalMonth,
+    );
     return {
       label: format(date, "dd/MM", { locale: ptBR }),
       spend,
       sharePercent: Math.round(sharePercent * 10) / 10,
+      goal: matchingGoal ? Number(matchingGoal.value) : undefined,
     };
   });
-}
-
-function getGoalValue(
-  goals: BrandGoalRow[],
-  metric: "share_total" | "share_recent",
-): number | undefined {
-  const metricGoals = goals
-    .filter((g) => g.metric === metric)
-    .sort((a, b) => b.month.localeCompare(a.month));
-  return metricGoals.length > 0 ? Number(metricGoals[0].value) : undefined;
 }
 
 export function DailyViewCharts({
@@ -102,11 +99,13 @@ export function DailyViewCharts({
   initialBrandId,
   initialCreators,
   initialData,
+  initialGoals = [],
 }: {
   brands: Brand[];
   initialBrandId: number | null;
   initialCreators: CreatorOption[];
   initialData: DailySpendRow[];
+  initialGoals?: BrandGoalRow[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -121,7 +120,7 @@ export function DailyViewCharts({
     return defaultPreset.getRange();
   });
   const [data, setData] = useState<DailySpendRow[]>(initialData);
-  const [goals, setGoals] = useState<BrandGoalRow[]>([]);
+  const [goals, setGoals] = useState<BrandGoalRow[]>(initialGoals);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
 
@@ -227,8 +226,8 @@ export function DailyViewCharts({
     }
   }
 
-  const totalChartData = toChartData(data, "spend_total");
-  const recentesChartData = toChartData(data, "spend_recentes");
+  const totalChartData = toChartData(data, "spend_total", goals, "share_total");
+  const recentesChartData = toChartData(data, "spend_recentes", goals, "share_recent");
 
   return (
     <div className="space-y-6">
@@ -294,12 +293,10 @@ export function DailyViewCharts({
           <SpendShareChart
             data={totalChartData}
             title="Gasto total em creators"
-            goalValue={getGoalValue(goals, "share_total")}
           />
           <SpendShareChart
             data={recentesChartData}
             title="Gasto em conteúdo recente de creators"
-            goalValue={getGoalValue(goals, "share_recent")}
           />
         </div>
       )}

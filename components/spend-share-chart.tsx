@@ -5,7 +5,6 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
-  ReferenceLine,
   XAxis,
   YAxis,
 } from "recharts";
@@ -22,12 +21,12 @@ export type SpendShareDataPoint = {
   label: string;
   spend: number;
   sharePercent: number;
+  goal?: number;
 };
 
 interface SpendShareChartProps {
   data: SpendShareDataPoint[];
   title: string;
-  goalValue?: number;
 }
 
 const chartConfig = {
@@ -58,7 +57,8 @@ function formatPercent(value: number) {
   return `${value.toFixed(1)}%`;
 }
 
-export function SpendShareChart({ data, title, goalValue }: SpendShareChartProps) {
+export function SpendShareChart({ data, title }: SpendShareChartProps) {
+  const hasGoal = data.some((d) => d.goal !== undefined);
   if (data.length === 0) {
     return (
       <div className="space-y-3">
@@ -107,28 +107,36 @@ export function SpendShareChart({ data, title, goalValue }: SpendShareChartProps
               return (
                 <div className="rounded-lg border bg-background p-2.5 text-xs shadow-xl">
                   <p className="mb-1.5 font-medium">{label}</p>
-                  {payload.map((entry) => (
-                    <div
-                      key={entry.dataKey}
-                      className="flex items-center gap-2"
-                    >
+                  {payload.map((entry) => {
+                    if (entry.dataKey === "goal" && entry.value == null) return null;
+                    const entryLabel =
+                      entry.dataKey === "spend"
+                        ? "Gasto"
+                        : entry.dataKey === "goal"
+                          ? "Meta"
+                          : "Share";
+                    const formatted =
+                      entry.dataKey === "spend"
+                        ? formatBRL(entry.value as number)
+                        : formatPercent(entry.value as number);
+                    return (
                       <div
-                        className="h-2.5 w-2.5 rounded-[2px]"
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span className="text-muted-foreground">
-                        {entry.dataKey === "spend"
-                          ? "Gasto"
-                          : "Share"}
-                        :
-                      </span>
-                      <span className="font-mono font-medium">
-                        {entry.dataKey === "spend"
-                          ? formatBRL(entry.value as number)
-                          : formatPercent(entry.value as number)}
-                      </span>
-                    </div>
-                  ))}
+                        key={entry.dataKey}
+                        className="flex items-center gap-2"
+                      >
+                        <div
+                          className="h-2.5 w-2.5 rounded-[2px]"
+                          style={{ backgroundColor: entry.color }}
+                        />
+                        <span className="text-muted-foreground">
+                          {entryLabel}:
+                        </span>
+                        <span className="font-mono font-medium">
+                          {formatted}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             }}
@@ -150,19 +158,17 @@ export function SpendShareChart({ data, title, goalValue }: SpendShareChartProps
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}
           />
-          {goalValue !== undefined && (
-            <ReferenceLine
+          {hasGoal && (
+            <Line
               yAxisId="right"
-              y={goalValue}
-              stroke="#ef4444"
-              strokeDasharray="6 4"
+              dataKey="goal"
+              type="monotone"
+              stroke="var(--color-goal)"
               strokeWidth={2}
-              label={{
-                value: `Meta: ${goalValue}%`,
-                position: "right",
-                fill: "#ef4444",
-                fontSize: 11,
-              }}
+              strokeDasharray="6 4"
+              dot={false}
+              activeDot={false}
+              connectNulls={false}
             />
           )}
         </ComposedChart>

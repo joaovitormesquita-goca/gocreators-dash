@@ -63,28 +63,24 @@ const monthlyPresets: DatePreset[] = [
 function toChartData(
   rows: MonthlySpendRow[],
   spendKey: "spend_total" | "spend_recentes",
+  goals: BrandGoalRow[],
+  metric: "share_total" | "share_recent",
 ): SpendShareDataPoint[] {
   return rows.map((row) => {
     const spend = Number(row[spendKey]) || 0;
     const brandTotal = Number(row.brand_total_spend) || 0;
     const sharePercent = brandTotal > 0 ? (spend / brandTotal) * 100 : 0;
     const date = new Date(row.month + "T00:00:00");
+    const matchingGoal = goals.find(
+      (g) => g.metric === metric && g.month === row.month,
+    );
     return {
       label: format(date, "MMM/yy", { locale: ptBR }),
       spend,
       sharePercent: Math.round(sharePercent * 10) / 10,
+      goal: matchingGoal ? Number(matchingGoal.value) : undefined,
     };
   });
-}
-
-function getGoalValue(
-  goals: BrandGoalRow[],
-  metric: "share_total" | "share_recent",
-): number | undefined {
-  const metricGoals = goals
-    .filter((g) => g.metric === metric)
-    .sort((a, b) => b.month.localeCompare(a.month));
-  return metricGoals.length > 0 ? Number(metricGoals[0].value) : undefined;
 }
 
 export function MonthlyViewCharts({
@@ -92,11 +88,13 @@ export function MonthlyViewCharts({
   initialBrandId,
   initialCreators,
   initialData,
+  initialGoals = [],
 }: {
   brands: Brand[];
   initialBrandId: number | null;
   initialCreators: CreatorOption[];
   initialData: MonthlySpendRow[];
+  initialGoals?: BrandGoalRow[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -111,7 +109,7 @@ export function MonthlyViewCharts({
     return defaultPreset.getRange();
   });
   const [data, setData] = useState<MonthlySpendRow[]>(initialData);
-  const [goals, setGoals] = useState<BrandGoalRow[]>([]);
+  const [goals, setGoals] = useState<BrandGoalRow[]>(initialGoals);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
 
@@ -217,8 +215,8 @@ export function MonthlyViewCharts({
     }
   }
 
-  const totalChartData = toChartData(data, "spend_total");
-  const recentesChartData = toChartData(data, "spend_recentes");
+  const totalChartData = toChartData(data, "spend_total", goals, "share_total");
+  const recentesChartData = toChartData(data, "spend_recentes", goals, "share_recent");
 
   return (
     <div className="space-y-6">
@@ -284,12 +282,10 @@ export function MonthlyViewCharts({
           <SpendShareChart
             data={totalChartData}
             title="Gasto total em creators"
-            goalValue={getGoalValue(goals, "share_total")}
           />
           <SpendShareChart
             data={recentesChartData}
             title="Gasto em conteúdo recente de creators"
-            goalValue={getGoalValue(goals, "share_recent")}
           />
         </div>
       )}
