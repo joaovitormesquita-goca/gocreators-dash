@@ -1,7 +1,8 @@
 import { subMonths, format, startOfMonth } from "date-fns";
 import { getBrands } from "@/lib/queries/brands";
 import { getCreatorsByBrand } from "@/lib/queries/creators";
-import { getMonthlySpendView, getGoalsForBrand } from "./actions";
+import { getMonthlySpendView } from "./actions";
+import { getGoalsForBrand } from "@/app/dashboard/brands/actions";
 import { MonthlyViewCharts } from "@/components/monthly-view-charts";
 
 export default async function MonthlyViewPage({

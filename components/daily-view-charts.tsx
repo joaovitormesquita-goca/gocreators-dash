@@ -25,7 +25,8 @@ import {
   SpendShareChart,
   type SpendShareDataPoint,
 } from "@/components/spend-share-chart";
-import { getDailySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, getGoalsForBrand, type DailySpendRow, type GroupOption, type BrandGoalRow } from "@/app/dashboard/daily-view/actions";
+import { getDailySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, type DailySpendRow, type GroupOption } from "@/app/dashboard/daily-view/actions";
+import { getGoalsForBrand, type BrandGoalRow } from "@/app/dashboard/brands/actions";
 
 type Brand = { id: number; name: string };
 

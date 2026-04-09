@@ -1,7 +1,8 @@
 import { subDays, format, startOfMonth } from "date-fns";
 import { getBrands } from "@/lib/queries/brands";
 import { getCreatorsByBrand } from "@/lib/queries/creators";
-import { getDailySpendView, getGoalsForBrand } from "./actions";
+import { getDailySpendView } from "./actions";
+import { getGoalsForBrand } from "@/app/dashboard/brands/actions";
 import { DailyViewCharts } from "@/components/daily-view-charts";
 
 export default async function DailyViewPage({

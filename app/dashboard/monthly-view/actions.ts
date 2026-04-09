@@ -88,5 +88,3 @@ export async function getMonthlySpendView(params: {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
-
-export { getGoalsForBrand, type BrandGoalRow } from "@/app/dashboard/brands/actions";
