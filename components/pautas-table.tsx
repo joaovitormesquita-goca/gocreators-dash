@@ -129,12 +129,12 @@ export function PautasTable({
     });
   }, [metrics, sortKey, sortDir]);
 
-  const columns: { key: SortKey; label: string }[] = [
+  const columns: { key: SortKey; label: string; align?: string }[] = [
     { key: "guideline_number", label: "Pauta" },
-    { key: "spend", label: "Gasto" },
-    { key: "roas", label: "ROAS" },
-    { key: "ctr", label: "CTR" },
-    { key: "creator_count", label: "Creators" },
+    { key: "spend", label: "Gasto", align: "text-right" },
+    { key: "roas", label: "ROAS", align: "text-right" },
+    { key: "ctr", label: "CTR", align: "text-right" },
+    { key: "creator_count", label: "Creators", align: "text-center" },
   ];
 
   function formatCell(row: GuidelineMetric, key: SortKey) {
@@ -216,7 +216,7 @@ export function PautasTable({
                 {columns.map((col) => (
                   <TableHead
                     key={col.key}
-                    className="cursor-pointer select-none whitespace-nowrap"
+                    className={`cursor-pointer select-none whitespace-nowrap ${col.align ?? ""}`}
                     onClick={() => handleSort(col.key)}
                   >
                     {col.label}
@@ -251,7 +251,7 @@ export function PautasTable({
                     {columns.map((col) => (
                       <TableCell
                         key={col.key}
-                        className={`whitespace-nowrap ${col.key === "roas" ? roasColor(row.roas) : ""}`}
+                        className={`whitespace-nowrap ${col.align ?? ""} ${col.key === "roas" ? roasColor(row.roas) : ""}`}
                       >
                         {formatCell(row, col.key)}
                       </TableCell>
