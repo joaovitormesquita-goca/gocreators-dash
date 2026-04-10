@@ -9,12 +9,16 @@ import {
   editAdAccountSchema,
   createGroupSchema,
   editGroupSchema,
+  upsertBrandGoalSchema,
+  deleteBrandGoalSchema,
   type CreateBrandInput,
   type EditBrandInput,
   type CreateAdAccountInput,
   type EditAdAccountInput,
   type CreateGroupInput,
   type EditGroupInput,
+  type UpsertBrandGoalInput,
+  type DeleteBrandGoalInput,
 } from "@/lib/schemas/brand";
 import {
   backfillChunkSchema,
@@ -38,6 +42,14 @@ export type BrandWithAdAccounts = {
   name: string;
   ad_accounts: AdAccount[];
   groups: CreatorGroup[];
+};
+
+export type BrandGoal = {
+  id: string;
+  brand_id: number;
+  metric: "share_total" | "share_recent";
+  month: string;
+  value: number;
 };
 
 type ActionResult =
@@ -355,6 +367,99 @@ export async function deleteGroup(
     .from("creator_groups")
     .delete()
     .eq("id", groupId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/dashboard/brands");
+  return { success: true };
+}
+
+// --- Brand Goals actions ---
+
+export type BrandGoalRow = {
+  metric: "share_total" | "share_recent";
+  month: string;
+  value: number;
+};
+
+export async function getGoalsForBrand(
+  brandId: number,
+  startDate: string,
+  endDate: string,
+): Promise<BrandGoalRow[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("brand_goals")
+    .select("metric, month, value")
+    .eq("brand_id", brandId)
+    .gte("month", startDate)
+    .lte("month", endDate);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as BrandGoalRow[];
+}
+
+export async function getBrandGoals(brandId: number): Promise<BrandGoal[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("brand_goals")
+    .select("id, brand_id, metric, month, value")
+    .eq("brand_id", brandId)
+    .order("month", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as BrandGoal[];
+}
+
+export async function upsertBrandGoal(
+  input: UpsertBrandGoalInput,
+): Promise<ActionResult> {
+  const parsed = upsertBrandGoalSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("brand_goals")
+    .upsert(
+      {
+        brand_id: parsed.data.brandId,
+        metric: parsed.data.metric,
+        month: parsed.data.month,
+        value: parsed.data.value,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "brand_id,metric,month" },
+    );
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/dashboard/brands");
+  return { success: true };
+}
+
+export async function deleteBrandGoal(
+  input: DeleteBrandGoalInput,
+): Promise<ActionResult> {
+  const parsed = deleteBrandGoalSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("brand_goals")
+    .delete()
+    .eq("id", parsed.data.goalId);
 
   if (error) {
     return { success: false, error: error.message };

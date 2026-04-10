@@ -26,6 +26,7 @@ import {
   type SpendShareDataPoint,
 } from "@/components/spend-share-chart";
 import { getDailySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, type DailySpendRow, type GroupOption } from "@/app/dashboard/daily-view/actions";
+import { getGoalsForBrand, type BrandGoalRow } from "@/app/dashboard/brands/actions";
 
 type Brand = { id: number; name: string };
 
@@ -73,16 +74,23 @@ const dailyPresets: DatePreset[] = [
 function toChartData(
   rows: DailySpendRow[],
   spendKey: "spend_total" | "spend_recentes",
+  goals: BrandGoalRow[],
+  metric: "share_total" | "share_recent",
 ): SpendShareDataPoint[] {
   return rows.map((row) => {
     const spend = Number(row[spendKey]) || 0;
     const brandTotal = Number(row.brand_total_spend) || 0;
     const sharePercent = brandTotal > 0 ? (spend / brandTotal) * 100 : 0;
     const date = new Date(row.day + "T00:00:00");
+    const goalMonth = row.day.slice(0, 7) + "-01";
+    const matchingGoal = goals.find(
+      (g) => g.metric === metric && g.month === goalMonth,
+    );
     return {
       label: format(date, "dd/MM", { locale: ptBR }),
       spend,
       sharePercent: Math.round(sharePercent * 10) / 10,
+      goal: matchingGoal ? Number(matchingGoal.value) : undefined,
     };
   });
 }
@@ -92,11 +100,13 @@ export function DailyViewCharts({
   initialBrandId,
   initialCreators,
   initialData,
+  initialGoals = [],
 }: {
   brands: Brand[];
   initialBrandId: number | null;
   initialCreators: CreatorOption[];
   initialData: DailySpendRow[];
+  initialGoals?: BrandGoalRow[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -111,6 +121,7 @@ export function DailyViewCharts({
     return defaultPreset.getRange();
   });
   const [data, setData] = useState<DailySpendRow[]>(initialData);
+  const [goals, setGoals] = useState<BrandGoalRow[]>(initialGoals);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
 
@@ -126,13 +137,21 @@ export function DailyViewCharts({
     (brandId: number, creatorIds: number[], range: { from: Date; to: Date }) => {
       startTransition(async () => {
         const allSelected = creatorIds.length === 0;
-        const rows = await getDailySpendView({
-          brandId,
-          creatorIds: allSelected ? undefined : creatorIds,
-          startDate: format(range.from, "yyyy-MM-dd"),
-          endDate: format(range.to, "yyyy-MM-dd"),
-        });
+        const [rows, brandGoals] = await Promise.all([
+          getDailySpendView({
+            brandId,
+            creatorIds: allSelected ? undefined : creatorIds,
+            startDate: format(range.from, "yyyy-MM-dd"),
+            endDate: format(range.to, "yyyy-MM-dd"),
+          }),
+          getGoalsForBrand(
+            brandId,
+            format(range.from, "yyyy-MM-01"),
+            format(range.to, "yyyy-MM-01"),
+          ),
+        ]);
         setData(rows);
+        setGoals(brandGoals);
       });
     },
     [],
@@ -148,12 +167,20 @@ export function DailyViewCharts({
       setCreators(newCreators);
       const allIds = newCreators.map((c) => c.id);
       setSelectedCreatorIds(allIds);
-      const rows = await getDailySpendView({
-        brandId,
-        startDate: format(dateRange.from, "yyyy-MM-dd"),
-        endDate: format(dateRange.to, "yyyy-MM-dd"),
-      });
+      const [rows, brandGoals] = await Promise.all([
+        getDailySpendView({
+          brandId,
+          startDate: format(dateRange.from, "yyyy-MM-dd"),
+          endDate: format(dateRange.to, "yyyy-MM-dd"),
+        }),
+        getGoalsForBrand(
+          brandId,
+          format(dateRange.from, "yyyy-MM-01"),
+          format(dateRange.to, "yyyy-MM-01"),
+        ),
+      ]);
       setData(rows);
+      setGoals(brandGoals);
     });
   }
 
@@ -168,13 +195,21 @@ export function DailyViewCharts({
       setCreators(filteredCreators);
       const allIds = filteredCreators.map((c) => c.id);
       setSelectedCreatorIds(allIds);
-      const rows = await getDailySpendView({
-        brandId: selectedBrandId,
-        creatorIds: allIds.length > 0 ? allIds : undefined,
-        startDate: format(dateRange.from, "yyyy-MM-dd"),
-        endDate: format(dateRange.to, "yyyy-MM-dd"),
-      });
+      const [rows, brandGoals] = await Promise.all([
+        getDailySpendView({
+          brandId: selectedBrandId,
+          creatorIds: allIds.length > 0 ? allIds : undefined,
+          startDate: format(dateRange.from, "yyyy-MM-dd"),
+          endDate: format(dateRange.to, "yyyy-MM-dd"),
+        }),
+        getGoalsForBrand(
+          selectedBrandId,
+          format(dateRange.from, "yyyy-MM-01"),
+          format(dateRange.to, "yyyy-MM-01"),
+        ),
+      ]);
       setData(rows);
+      setGoals(brandGoals);
     });
   }
 
@@ -192,8 +227,8 @@ export function DailyViewCharts({
     }
   }
 
-  const totalChartData = toChartData(data, "spend_total");
-  const recentesChartData = toChartData(data, "spend_recentes");
+  const totalChartData = toChartData(data, "spend_total", goals, "share_total");
+  const recentesChartData = toChartData(data, "spend_recentes", goals, "share_recent");
 
   return (
     <div className="space-y-6">

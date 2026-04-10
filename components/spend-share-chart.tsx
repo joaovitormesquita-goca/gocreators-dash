@@ -21,6 +21,7 @@ export type SpendShareDataPoint = {
   label: string;
   spend: number;
   sharePercent: number;
+  goal?: number;
 };
 
 interface SpendShareChartProps {
@@ -36,6 +37,10 @@ const chartConfig = {
   sharePercent: {
     label: "Share %",
     color: "hsl(var(--chart-2))",
+  },
+  goal: {
+    label: "Meta",
+    color: "#ef4444",
   },
 } satisfies ChartConfig;
 
@@ -53,6 +58,7 @@ function formatPercent(value: number) {
 }
 
 export function SpendShareChart({ data, title }: SpendShareChartProps) {
+  const hasGoal = data.some((d) => d.goal !== undefined);
   if (data.length === 0) {
     return (
       <div className="space-y-3">
@@ -101,28 +107,36 @@ export function SpendShareChart({ data, title }: SpendShareChartProps) {
               return (
                 <div className="rounded-lg border bg-background p-2.5 text-xs shadow-xl">
                   <p className="mb-1.5 font-medium">{label}</p>
-                  {payload.map((entry) => (
-                    <div
-                      key={entry.dataKey}
-                      className="flex items-center gap-2"
-                    >
+                  {payload.map((entry) => {
+                    if (entry.dataKey === "goal" && entry.value == null) return null;
+                    const entryLabel =
+                      entry.dataKey === "spend"
+                        ? "Gasto"
+                        : entry.dataKey === "goal"
+                          ? "Meta"
+                          : "Share";
+                    const formatted =
+                      entry.dataKey === "spend"
+                        ? formatBRL(entry.value as number)
+                        : formatPercent(entry.value as number);
+                    return (
                       <div
-                        className="h-2.5 w-2.5 rounded-[2px]"
-                        style={{ backgroundColor: entry.color }}
-                      />
-                      <span className="text-muted-foreground">
-                        {entry.dataKey === "spend"
-                          ? "Gasto"
-                          : "Share"}
-                        :
-                      </span>
-                      <span className="font-mono font-medium">
-                        {entry.dataKey === "spend"
-                          ? formatBRL(entry.value as number)
-                          : formatPercent(entry.value as number)}
-                      </span>
-                    </div>
-                  ))}
+                        key={entry.dataKey}
+                        className="flex items-center gap-2"
+                      >
+                        <div
+                          className="h-2.5 w-2.5 rounded-[2px]"
+                          style={{ backgroundColor: entry.color }}
+                        />
+                        <span className="text-muted-foreground">
+                          {entryLabel}:
+                        </span>
+                        <span className="font-mono font-medium">
+                          {formatted}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             }}
@@ -144,6 +158,19 @@ export function SpendShareChart({ data, title }: SpendShareChartProps) {
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}
           />
+          {hasGoal && (
+            <Line
+              yAxisId="right"
+              dataKey="goal"
+              type="monotone"
+              stroke="var(--color-goal)"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              dot={false}
+              activeDot={false}
+              connectNulls={false}
+            />
+          )}
         </ComposedChart>
       </ChartContainer>
     </div>

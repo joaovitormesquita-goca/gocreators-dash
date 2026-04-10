@@ -1,7 +1,8 @@
-import { subDays, format } from "date-fns";
+import { subDays, format, startOfMonth } from "date-fns";
 import { getBrands } from "@/lib/queries/brands";
 import { getCreatorsByBrand } from "@/lib/queries/creators";
 import { getDailySpendView } from "./actions";
+import { getGoalsForBrand } from "@/app/dashboard/brands/actions";
 import { DailyViewCharts } from "@/components/daily-view-charts";
 
 export default async function DailyViewPage({
@@ -23,13 +24,20 @@ export default async function DailyViewPage({
   const defaultStart = format(subDays(now, 29), "yyyy-MM-dd");
   const defaultEnd = format(now, "yyyy-MM-dd");
 
-  const initialData = selectedBrandId
-    ? await getDailySpendView({
-        brandId: selectedBrandId,
-        startDate: defaultStart,
-        endDate: defaultEnd,
-      })
-    : [];
+  const [initialData, initialGoals] = selectedBrandId
+    ? await Promise.all([
+        getDailySpendView({
+          brandId: selectedBrandId,
+          startDate: defaultStart,
+          endDate: defaultEnd,
+        }),
+        getGoalsForBrand(
+          selectedBrandId,
+          format(startOfMonth(subDays(now, 29)), "yyyy-MM-01"),
+          format(now, "yyyy-MM-01"),
+        ),
+      ])
+    : [[], []];
 
   return (
     <div className="space-y-6">
@@ -39,6 +47,7 @@ export default async function DailyViewPage({
         initialBrandId={selectedBrandId}
         initialCreators={creators}
         initialData={initialData}
+        initialGoals={initialGoals}
       />
     </div>
   );

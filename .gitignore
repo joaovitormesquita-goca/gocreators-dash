@@ -48,3 +48,9 @@ next-env.d.ts
 .claude/*
 !.claude/skills/
 .mcp.json
+
+# worktrees
+.worktrees/
+
+# superpowers
+.superpowers/
