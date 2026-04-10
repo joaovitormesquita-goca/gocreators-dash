@@ -88,13 +88,18 @@ export function PautasTable({
     router.push(`/dashboard/pautas?brand=${value}`);
     setSelectedMonth("all");
     startTransition(async () => {
-      const brandId = Number(value);
-      const [data, months] = await Promise.all([
-        getGuidelineMetrics(brandId),
-        getAvailableMonths(brandId),
-      ]);
-      setMetrics(data);
-      setAvailableMonths(months);
+      try {
+        const brandId = Number(value);
+        const [data, months] = await Promise.all([
+          getGuidelineMetrics(brandId),
+          getAvailableMonths(brandId),
+        ]);
+        setMetrics(data);
+        setAvailableMonths(months);
+      } catch {
+        setMetrics([]);
+        setAvailableMonths([]);
+      }
     });
   }
 
@@ -102,9 +107,13 @@ export function PautasTable({
     setSelectedMonth(value);
     if (!selectedBrandId) return;
     startTransition(async () => {
-      const month = value === "all" ? undefined : value;
-      const data = await getGuidelineMetrics(selectedBrandId, month);
-      setMetrics(data);
+      try {
+        const month = value === "all" ? undefined : value;
+        const data = await getGuidelineMetrics(selectedBrandId, month);
+        setMetrics(data);
+      } catch {
+        setMetrics([]);
+      }
     });
   }
 

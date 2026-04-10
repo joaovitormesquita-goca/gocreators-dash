@@ -12,12 +12,19 @@ export default async function PautasPage({
     ? Number(params.brand)
     : brands[0]?.id ?? null;
 
-  const [metrics, months] = selectedBrandId
-    ? await Promise.all([
+  let metrics: Awaited<ReturnType<typeof getGuidelineMetrics>> = [];
+  let months: Awaited<ReturnType<typeof getAvailableMonths>> = [];
+
+  if (selectedBrandId) {
+    try {
+      [metrics, months] = await Promise.all([
         getGuidelineMetrics(selectedBrandId),
         getAvailableMonths(selectedBrandId),
-      ])
-    : [[], []];
+      ]);
+    } catch {
+      // RPC functions may not exist yet (e.g. local dev before migration)
+    }
+  }
 
   return (
     <div className="space-y-6">
