@@ -56,7 +56,9 @@ const metricOptions = [
 
 export function BrandGoalsSection({ brands }: { brands: Brand[] }) {
   const [isPending, startTransition] = useTransition();
-  const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
+  const [selectedBrandId, setSelectedBrandId] = useState<number | null>(
+    brands.length > 0 ? brands[0].id : null,
+  );
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedMetric, setSelectedMetric] = useState<string>("");
   const [goalValue, setGoalValue] = useState<string>("");
