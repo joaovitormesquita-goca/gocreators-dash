@@ -14,3 +14,8 @@ export function matchCreatorBrand(
   }
   return null;
 }
+
+export function extractGuidelineNumber(adName: string): number | null {
+  const match = adName.match(/- pauta (\d+) -/i);
+  return match ? parseInt(match[1], 10) : null;
+}
