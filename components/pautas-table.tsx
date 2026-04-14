@@ -26,7 +26,7 @@ import {
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
 type Brand = { id: number; name: string };
-type SortKey = keyof GuidelineMetric;
+type SortKey = keyof GuidelineMetric | "trend";
 type SortDir = "asc" | "desc";
 
 function formatCurrency(value: number | null) {
@@ -58,6 +58,29 @@ function formatMonthLabel(ym: string) {
   const [year, month] = ym.split("-");
   const date = new Date(Number(year), Number(month) - 1);
   return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+}
+
+function formatMonthShort(ym: string) {
+  const [year, month] = ym.split("-");
+  const date = new Date(Number(year), Number(month) - 1);
+  return date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+}
+
+function trendVariation(roas: number, prevRoas: number | null): number | null {
+  if (prevRoas == null) return null;
+  if (prevRoas === 0) return roas > 0 ? Infinity : 0;
+  return Math.round(((roas - prevRoas) / prevRoas) * 100);
+}
+
+function formatTrend(row: GuidelineMetric): { text: string; color: string } {
+  const variation = trendVariation(row.roas, row.prev_roas);
+  if (variation == null) return { text: "—", color: "text-muted-foreground" };
+  if (variation === Infinity) return { text: `↑ novo vs ${formatMonthShort(row.prev_month!)}`, color: "text-green-500" };
+
+  const monthRef = formatMonthShort(row.prev_month!);
+  if (variation > 0) return { text: `↑ ${variation}% vs ${monthRef}`, color: "text-green-500" };
+  if (variation < 0) return { text: `↓ ${Math.abs(variation)}% vs ${monthRef}`, color: "text-red-500" };
+  return { text: `→ 0% vs ${monthRef}`, color: "text-muted-foreground" };
 }
 
 export function PautasTable({
@@ -128,6 +151,15 @@ export function PautasTable({
 
   const sorted = useMemo(() => {
     return [...metrics].sort((a, b) => {
+      if (sortKey === "trend") {
+        const aVar = trendVariation(a.roas, a.prev_roas);
+        const bVar = trendVariation(b.roas, b.prev_roas);
+        if (aVar == null && bVar == null) return 0;
+        if (aVar == null) return 1;
+        if (bVar == null) return -1;
+        const cmp = aVar < bVar ? -1 : aVar > bVar ? 1 : 0;
+        return sortDir === "asc" ? cmp : -cmp;
+      }
       const aVal = a[sortKey];
       const bVal = b[sortKey];
       if (aVal == null && bVal == null) return 0;
@@ -141,9 +173,12 @@ export function PautasTable({
   const columns: { key: SortKey; label: string; align?: string }[] = [
     { key: "guideline_number", label: "Pauta" },
     { key: "spend", label: "Gasto", align: "text-right" },
+    { key: "revenue", label: "Revenue", align: "text-right" },
     { key: "roas", label: "ROAS", align: "text-right" },
     { key: "ctr", label: "CTR", align: "text-right" },
+    { key: "ad_count", label: "Anúncios", align: "text-center" },
     { key: "creator_count", label: "Creators", align: "text-center" },
+    { key: "trend", label: "Tendência", align: "text-right" },
   ];
 
   function formatCell(row: GuidelineMetric, key: SortKey) {
@@ -152,14 +187,20 @@ export function PautasTable({
         return `#${row.guideline_number}`;
       case "spend":
         return formatCurrency(row.spend);
+      case "revenue":
+        return formatCurrency(row.revenue);
       case "roas":
         return formatRoas(row.roas);
       case "ctr":
         return formatCtr(row.ctr);
+      case "ad_count":
+        return String(row.ad_count);
       case "creator_count":
         return String(row.creator_count);
+      case "trend":
+        return null;
       default:
-        return String(row[key] ?? "");
+        return "";
     }
   }
 
@@ -262,7 +303,13 @@ export function PautasTable({
                         key={col.key}
                         className={`whitespace-nowrap ${col.align ?? ""} ${col.key === "roas" ? roasColor(row.roas) : ""}`}
                       >
-                        {formatCell(row, col.key)}
+                        {col.key === "trend" ? (
+                          <span className={formatTrend(row).color}>
+                            {formatTrend(row).text}
+                          </span>
+                        ) : (
+                          formatCell(row, col.key)
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
