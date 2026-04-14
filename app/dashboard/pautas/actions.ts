@@ -10,9 +10,13 @@ export async function getBrands() {
 export type GuidelineMetric = {
   guideline_number: number;
   spend: number;
+  revenue: number;
   roas: number;
   ctr: number;
   creator_count: number;
+  ad_count: number;
+  prev_roas: number | null;
+  prev_month: string | null;
 };
 
 export async function getGuidelineMetrics(
