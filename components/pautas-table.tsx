@@ -68,14 +68,13 @@ function formatMonthShort(ym: string) {
 
 function trendVariation(roas: number, prevRoas: number | null): number | null {
   if (prevRoas == null) return null;
-  if (prevRoas === 0) return roas > 0 ? Infinity : 0;
+  if (prevRoas === 0) return roas > 0 ? 100 : 0;
   return Math.round(((roas - prevRoas) / prevRoas) * 100);
 }
 
 function formatTrend(row: GuidelineMetric): { text: string; color: string } {
   const variation = trendVariation(row.roas, row.prev_roas);
   if (variation == null) return { text: "—", color: "text-muted-foreground" };
-  if (variation === Infinity) return { text: `↑ novo vs ${formatMonthShort(row.prev_month!)}`, color: "text-green-500" };
 
   const monthRef = formatMonthShort(row.prev_month!);
   if (variation > 0) return { text: `↑ ${variation}% vs ${monthRef}`, color: "text-green-500" };
