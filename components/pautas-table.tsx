@@ -18,6 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import {
   getGuidelineMetrics,
   getAvailableMonths,
@@ -101,14 +105,30 @@ export function PautasTable({
   const [isPending, startTransition] = useTransition();
   const [sortKey, setSortKey] = useState<SortKey>("roas");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [selectedGuidelines, setSelectedGuidelines] = useState<Set<number>>(new Set());
 
   const selectedBrandId = searchParams.get("brand")
     ? Number(searchParams.get("brand"))
     : initialBrandId;
 
+  const availableGuidelines = useMemo(
+    () => metrics.map((m) => m.guideline_number).sort((a, b) => a - b),
+    [metrics],
+  );
+
+  function toggleGuideline(num: number) {
+    setSelectedGuidelines((prev) => {
+      const next = new Set(prev);
+      if (next.has(num)) next.delete(num);
+      else next.add(num);
+      return next;
+    });
+  }
+
   function handleBrandChange(value: string) {
     router.push(`/dashboard/pautas?brand=${value}`);
     setSelectedMonth("all");
+    setSelectedGuidelines(new Set());
     startTransition(async () => {
       try {
         const brandId = Number(value);
@@ -127,6 +147,7 @@ export function PautasTable({
 
   function handleMonthChange(value: string) {
     setSelectedMonth(value);
+    setSelectedGuidelines(new Set());
     if (!selectedBrandId) return;
     startTransition(async () => {
       try {
@@ -149,7 +170,12 @@ export function PautasTable({
   }
 
   const sorted = useMemo(() => {
-    return [...metrics].sort((a, b) => {
+    const filtered =
+      selectedGuidelines.size === 0
+        ? metrics
+        : metrics.filter((m) => selectedGuidelines.has(m.guideline_number));
+
+    return [...filtered].sort((a, b) => {
       if (sortKey === "trend") {
         const aVar = trendVariation(a.roas, a.prev_roas);
         const bVar = trendVariation(b.roas, b.prev_roas);
@@ -167,7 +193,7 @@ export function PautasTable({
       const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [metrics, sortKey, sortDir]);
+  }, [metrics, sortKey, sortDir, selectedGuidelines]);
 
   const columns: { key: SortKey; label: string; align?: string }[] = [
     { key: "guideline_number", label: "Pauta" },
