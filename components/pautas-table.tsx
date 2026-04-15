@@ -277,6 +277,55 @@ export function PautasTable({
             ))}
           </SelectContent>
         </Select>
+
+        <label className="text-sm font-medium text-muted-foreground">
+          Pautas:
+        </label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-[200px] justify-start font-normal">
+              {selectedGuidelines.size === 0
+                ? "Todas as pautas"
+                : `${selectedGuidelines.size} selecionada${selectedGuidelines.size > 1 ? "s" : ""}`}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[240px] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Buscar pauta..." />
+              <CommandList>
+                <CommandEmpty>Nenhuma pauta encontrada.</CommandEmpty>
+                <CommandGroup>
+                  {availableGuidelines.map((num) => (
+                    <CommandItem
+                      key={num}
+                      value={String(num)}
+                      onSelect={() => toggleGuideline(num)}
+                      className="cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={selectedGuidelines.has(num)}
+                        className="mr-2"
+                      />
+                      #{num}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+              {selectedGuidelines.size > 0 && (
+                <div className="border-t p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setSelectedGuidelines(new Set())}
+                  >
+                    Limpar seleção
+                  </Button>
+                </div>
+              )}
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {brands.length === 0 ? (
