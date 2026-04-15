@@ -304,7 +304,7 @@ export function PautasTable({
                     >
                       <Checkbox
                         checked={selectedGuidelines.has(num)}
-                        className="mr-2"
+                        className="mr-2 pointer-events-none"
                       />
                       #{num}
                     </CommandItem>
