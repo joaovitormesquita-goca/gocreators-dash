@@ -16,9 +16,12 @@ export async function getBrands() {
   return _getBrands();
 }
 
+export type CreatorViewMode = "creator" | "product" | "granular";
+
 export type CreatorMetric = {
-  creator: string;
-  creator_brand_id: number;
+  creator: string | null;
+  creator_brand_id: number | null;
+  product_name: string | null;
   month: string;
   group_id: number | null;
   spend_total: number;
@@ -28,8 +31,7 @@ export type CreatorMetric = {
   roas_recentes: number;
   ctr_recentes: number;
   cost: number | null;
-  yearly_spend: number;
-  product_names: string | null;
+  yearly_spend: number | null;
 };
 
 export type GroupOption = {
@@ -88,11 +90,13 @@ export async function getCreatorBrandsForBrand(
 
 export async function getCreatorMetrics(
   brandId: number,
+  viewMode: CreatorViewMode = "creator",
 ): Promise<CreatorMetric[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("get_creator_metrics", {
     p_brand_id: brandId,
+    p_view_mode: viewMode,
   });
 
   if (error) throw new Error(error.message);

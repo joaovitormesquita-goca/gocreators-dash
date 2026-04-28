@@ -17,14 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getCreatorMetrics,
   getGroupsByBrand,
   type CreatorMetric,
+  type CreatorViewMode,
   type GroupOption,
 } from "@/app/dashboard/creators/actions";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { toast } from "sonner";
 import { InlineEditCost } from "@/components/inline-edit-cost";
 
 type Brand = { id: number; name: string };
@@ -54,6 +57,45 @@ function formatMonth(dateStr: string) {
   return date.toLocaleDateString("pt-BR", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
+const COLUMNS_BY_MODE: Record<
+  CreatorViewMode,
+  { key: SortKey; label: string; sortable?: boolean }[]
+> = {
+  creator: [
+    { key: "month", label: "Mês/Ano" },
+    { key: "creator", label: "Creator" },
+    { key: "cost", label: "Custo" },
+    { key: "yearly_spend", label: "Investimento Ano" },
+    { key: "spend_total", label: "Gasto" },
+    { key: "roas_total", label: "ROAS" },
+    { key: "ctr_total", label: "CTR" },
+    { key: "spend_recentes", label: "Gasto Recentes" },
+    { key: "roas_recentes", label: "ROAS Recentes" },
+    { key: "ctr_recentes", label: "CTR Recentes" },
+  ],
+  product: [
+    { key: "month", label: "Mês/Ano" },
+    { key: "product_name", label: "Produto" },
+    { key: "spend_total", label: "Gasto" },
+    { key: "roas_total", label: "ROAS" },
+    { key: "ctr_total", label: "CTR" },
+    { key: "spend_recentes", label: "Gasto Recentes" },
+    { key: "roas_recentes", label: "ROAS Recentes" },
+    { key: "ctr_recentes", label: "CTR Recentes" },
+  ],
+  granular: [
+    { key: "month", label: "Mês/Ano" },
+    { key: "creator", label: "Creator" },
+    { key: "product_name", label: "Produto" },
+    { key: "spend_total", label: "Gasto" },
+    { key: "roas_total", label: "ROAS" },
+    { key: "ctr_total", label: "CTR" },
+    { key: "spend_recentes", label: "Gasto Recentes" },
+    { key: "roas_recentes", label: "ROAS Recentes" },
+    { key: "ctr_recentes", label: "CTR Recentes" },
+  ],
+};
+
 export function CreatorsTable({
   brands,
   initialBrandId,
@@ -67,6 +109,7 @@ export function CreatorsTable({
   const searchParams = useSearchParams();
   const [metrics, setMetrics] = useState(initialMetrics);
   const [isPending, startTransition] = useTransition();
+  const [viewMode, setViewMode] = useState<CreatorViewMode>("creator");
   const [sortKey, setSortKey] = useState<SortKey>("creator");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
@@ -79,7 +122,7 @@ export function CreatorsTable({
 
   useEffect(() => {
     if (selectedBrandId) {
-      getGroupsByBrand(selectedBrandId).then(setGroups);
+      getGroupsByBrand(selectedBrandId).then(setGroups).catch(() => setGroups([]));
     } else {
       setGroups([]);
     }
@@ -90,14 +133,34 @@ export function CreatorsTable({
     return unique.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
   }, [metrics]);
 
+  function reload(brandId: number, mode: CreatorViewMode) {
+    startTransition(async () => {
+      try {
+        const data = await getCreatorMetrics(brandId, mode);
+        setMetrics(data);
+      } catch {
+        toast.error("Erro ao carregar dados da Tabela Mensal");
+        setMetrics([]);
+      }
+    });
+  }
+
   function handleBrandChange(value: string) {
     router.push(`/dashboard/creators?brand=${value}`);
     setSelectedMonth("all");
     setSelectedGroupId("all");
-    startTransition(async () => {
-      const data = await getCreatorMetrics(Number(value));
-      setMetrics(data);
-    });
+    reload(Number(value), viewMode);
+  }
+
+  function handleViewModeChange(value: string) {
+    if (!value || value === viewMode) return;
+    const mode = value as CreatorViewMode;
+    setViewMode(mode);
+    setSortKey(mode === "product" ? "product_name" : "creator");
+    setSortDir("asc");
+    setSelectedMonth("all");
+    setSelectedGroupId("all");
+    if (selectedBrandId) reload(selectedBrandId, mode);
   }
 
   function handleSort(key: SortKey) {
@@ -105,7 +168,7 @@ export function CreatorsTable({
       setSortDir(sortDir === "asc" ? "desc" : "asc");
     } else {
       setSortKey(key);
-      setSortDir(key === "creator" ? "asc" : "desc");
+      setSortDir(key === "creator" || key === "product_name" ? "asc" : "desc");
     }
   }
 
@@ -115,12 +178,14 @@ export function CreatorsTable({
     );
   }
 
+  const columns = COLUMNS_BY_MODE[viewMode];
+
   const sorted = useMemo(() => {
     let filtered = selectedMonth === "all"
       ? metrics
       : metrics.filter((m) => m.month === selectedMonth);
 
-    if (selectedGroupId !== "all") {
+    if (viewMode === "creator" && selectedGroupId !== "all") {
       if (selectedGroupId === "none") {
         filtered = filtered.filter((m) => m.group_id == null);
       } else {
@@ -137,7 +202,7 @@ export function CreatorsTable({
       const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [metrics, sortKey, sortDir, selectedMonth, selectedGroupId]);
+  }, [metrics, sortKey, sortDir, selectedMonth, selectedGroupId, viewMode]);
 
   function SortIcon({ column }: { column: SortKey }) {
     if (sortKey !== column) return <ArrowUpDown className="ml-1 h-3 w-3 inline" />;
@@ -148,32 +213,19 @@ export function CreatorsTable({
     );
   }
 
-  const columns: { key: SortKey; label: string; sortable?: boolean }[] = [
-    { key: "month", label: "Mês/Ano" },
-    { key: "creator", label: "Creator" },
-    { key: "product_names", label: "Produto", sortable: false },
-    { key: "cost", label: "Custo" },
-    { key: "yearly_spend", label: "Investimento Ano" },
-    { key: "spend_total", label: "Gasto" },
-    { key: "roas_total", label: "ROAS" },
-    { key: "ctr_total", label: "CTR" },
-    { key: "spend_recentes", label: "Gasto Recentes" },
-    { key: "roas_recentes", label: "ROAS Recentes" },
-    { key: "ctr_recentes", label: "CTR Recentes" },
-  ];
-
   function formatCell(row: CreatorMetric, key: SortKey) {
     switch (key) {
       case "month":
         return formatMonth(row.month);
       case "creator":
-        return row.creator;
-      case "product_names":
-        return row.product_names ?? "Não informado";
+        return row.creator ?? "—";
+      case "product_name":
+        return row.product_name ?? "Não informado";
       case "spend_total":
       case "spend_recentes":
-      case "yearly_spend":
         return formatCurrency(row[key] as number);
+      case "yearly_spend":
+        return row.yearly_spend == null ? "—" : formatCurrency(row.yearly_spend);
       case "roas_total":
       case "roas_recentes":
         return formatRoas(row[key] as number);
@@ -183,6 +235,15 @@ export function CreatorsTable({
       default:
         return String(row[key] ?? "");
     }
+  }
+
+  function rowKey(row: CreatorMetric, i: number) {
+    return [
+      row.month,
+      row.creator_brand_id ?? "—",
+      row.product_name ?? "—",
+      i,
+    ].join("|");
   }
 
   return (
@@ -205,7 +266,20 @@ export function CreatorsTable({
           </SelectContent>
         </Select>
 
-        {groups.length > 0 && (
+        <label className="text-sm font-medium text-muted-foreground">Visão:</label>
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={handleViewModeChange}
+          variant="outline"
+          size="sm"
+        >
+          <ToggleGroupItem value="creator">Por Creator</ToggleGroupItem>
+          <ToggleGroupItem value="product">Por Produto</ToggleGroupItem>
+          <ToggleGroupItem value="granular">Granular</ToggleGroupItem>
+        </ToggleGroup>
+
+        {viewMode === "creator" && groups.length > 0 && (
           <>
             <label className="text-sm font-medium text-muted-foreground">Grupo:</label>
             <Select
@@ -285,10 +359,10 @@ export function CreatorsTable({
                 </TableRow>
               ) : (
                 sorted.map((row, i) => (
-                  <TableRow key={`${row.creator}-${row.month}-${i}`}>
+                  <TableRow key={rowKey(row, i)}>
                     {columns.map((col) => (
                       <TableCell key={col.key} className="whitespace-nowrap">
-                        {col.key === "cost" ? (
+                        {col.key === "cost" && viewMode === "creator" && row.creator_brand_id != null ? (
                           <InlineEditCost
                             value={row.cost}
                             creatorBrandId={row.creator_brand_id}
