@@ -25,6 +25,7 @@ import {
   SpendShareChart,
   type SpendShareDataPoint,
 } from "@/components/spend-share-chart";
+import { toast } from "sonner";
 import { getMonthlySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, getDistinctProducts, type MonthlySpendRow, type GroupOption } from "@/app/dashboard/monthly-view/actions";
 import { getGoalsForBrand, type BrandGoalRow } from "@/app/dashboard/brands/actions";
 
@@ -118,8 +119,15 @@ export function MonthlyViewCharts({
 
   useEffect(() => {
     if (selectedBrandId) {
-      getGroupsByBrand(selectedBrandId).then(setGroups);
-      getDistinctProducts(selectedBrandId).then(setProducts);
+      Promise.all([
+        getGroupsByBrand(selectedBrandId),
+        getDistinctProducts(selectedBrandId),
+      ])
+        .then(([grps, prods]) => {
+          setGroups(grps);
+          setProducts(prods);
+        })
+        .catch(() => toast.error("Erro ao carregar filtros"));
     } else {
       setGroups([]);
       setProducts([]);

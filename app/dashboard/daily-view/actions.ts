@@ -85,8 +85,8 @@ export async function getDailySpendView(params: {
     p_creator_ids: parsed.data.creatorIds ?? null,
     p_start_date: parsed.data.startDate,
     p_end_date: parsed.data.endDate,
-    p_product_names: params.productNames && params.productNames.length > 0
-      ? params.productNames
+    p_product_names: parsed.data.productNames && parsed.data.productNames.length > 0
+      ? parsed.data.productNames
       : null,
   });
 
