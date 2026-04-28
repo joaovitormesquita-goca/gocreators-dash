@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { MetabaseClient } from "./metabase-client.ts";
-import { matchCreatorBrand, extractGuidelineNumber } from "./handle-matcher.ts";
+import { matchCreatorBrand, extractGuidelineNumber, extractProductName } from "./handle-matcher.ts";
 import { buildMetabaseQuery, buildAccountSpendQuery } from "./queries.ts";
 import type { AdAccount, CreatorBrand, MetabaseRow, SyncResult } from "./types.ts";
 
@@ -274,6 +274,7 @@ async function processAdAccount(
       created_time: createdTime,
       ad_name: adName,
       guideline_number: extractGuidelineNumber(adName),
+      product_name: extractProductName(adName),
     }),
   );
 

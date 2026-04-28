@@ -19,3 +19,8 @@ export function extractGuidelineNumber(adName: string): number | null {
   const match = adName.match(/\bpauta\s+(\d+)/i);
   return match ? parseInt(match[1], 10) : null;
 }
+
+export function extractProductName(adName: string): string | null {
+  const match = adName.match(/produto\s+([^-]+?)\s*(?:-|$)/i);
+  return match ? match[1].trim() : null;
+}
