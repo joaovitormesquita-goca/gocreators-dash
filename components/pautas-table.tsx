@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useEffect, useRef, useState, useTransition, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -25,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import {
   getGuidelineMetrics,
   getAvailableMonths,
+  getDistinctProducts,
   type GuidelineMetric,
 } from "@/app/dashboard/pautas/actions";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
@@ -91,17 +93,21 @@ export function PautasTable({
   initialBrandId,
   initialData,
   initialMonths,
+  initialProducts,
 }: {
   brands: Brand[];
   initialBrandId: number | null;
   initialData: GuidelineMetric[];
   initialMonths: string[];
+  initialProducts: string[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [metrics, setMetrics] = useState(initialData);
   const [availableMonths, setAvailableMonths] = useState(initialMonths);
+  const [availableProducts, setAvailableProducts] = useState(initialProducts);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [selectedProduct, setSelectedProduct] = useState<string>("all");
   const [isPending, startTransition] = useTransition();
   const [sortKey, setSortKey] = useState<SortKey>("roas");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -110,6 +116,34 @@ export function PautasTable({
   const selectedBrandId = searchParams.get("brand")
     ? Number(searchParams.get("brand"))
     : initialBrandId;
+
+  const lastFetchedBrandRef = useRef(initialBrandId);
+
+  useEffect(() => {
+    if (selectedBrandId === lastFetchedBrandRef.current) return;
+    lastFetchedBrandRef.current = selectedBrandId;
+    if (!selectedBrandId) return;
+    setSelectedMonth("all");
+    setSelectedProduct("all");
+    setSelectedGuidelines(new Set());
+    startTransition(async () => {
+      try {
+        const [data, months, products] = await Promise.all([
+          getGuidelineMetrics(selectedBrandId),
+          getAvailableMonths(selectedBrandId),
+          getDistinctProducts(selectedBrandId),
+        ]);
+        setMetrics(data);
+        setAvailableMonths(months);
+        setAvailableProducts(products);
+      } catch {
+        toast.error("Erro ao carregar dados das Pautas");
+        setMetrics([]);
+        setAvailableMonths([]);
+        setAvailableProducts([]);
+      }
+    });
+  }, [selectedBrandId]);
 
   const availableGuidelines = useMemo(
     () => metrics.map((m) => m.guideline_number).sort((a, b) => a - b),
@@ -125,39 +159,34 @@ export function PautasTable({
     });
   }
 
-  function handleBrandChange(value: string) {
-    router.push(`/dashboard/pautas?brand=${value}`);
-    setSelectedMonth("all");
-    setSelectedGuidelines(new Set());
+  function refetch(brandId: number, month: string, product: string) {
+    const monthArg = month === "all" ? undefined : month;
+    const productArg = product === "all" ? undefined : [product];
     startTransition(async () => {
       try {
-        const brandId = Number(value);
-        const [data, months] = await Promise.all([
-          getGuidelineMetrics(brandId),
-          getAvailableMonths(brandId),
-        ]);
+        const data = await getGuidelineMetrics(brandId, monthArg, productArg);
         setMetrics(data);
-        setAvailableMonths(months);
       } catch {
+        toast.error("Erro ao carregar dados das Pautas");
         setMetrics([]);
-        setAvailableMonths([]);
       }
     });
+  }
+
+  function handleBrandChange(value: string) {
+    router.push(`/dashboard/pautas?brand=${value}`);
   }
 
   function handleMonthChange(value: string) {
     setSelectedMonth(value);
     setSelectedGuidelines(new Set());
-    if (!selectedBrandId) return;
-    startTransition(async () => {
-      try {
-        const month = value === "all" ? undefined : value;
-        const data = await getGuidelineMetrics(selectedBrandId, month);
-        setMetrics(data);
-      } catch {
-        setMetrics([]);
-      }
-    });
+    if (selectedBrandId) refetch(selectedBrandId, value, selectedProduct);
+  }
+
+  function handleProductChange(value: string) {
+    setSelectedProduct(value);
+    setSelectedGuidelines(new Set());
+    if (selectedBrandId) refetch(selectedBrandId, selectedMonth, value);
   }
 
   function handleSort(key: SortKey) {
@@ -197,13 +226,13 @@ export function PautasTable({
 
   const columns: { key: SortKey; label: string; align?: string; sortable?: boolean }[] = [
     { key: "guideline_number", label: "Pauta" },
+    { key: "product_names", label: "Produto", sortable: false },
     { key: "spend", label: "Gasto", align: "text-right" },
     { key: "revenue", label: "Revenue", align: "text-right" },
     { key: "roas", label: "ROAS", align: "text-right" },
     { key: "ctr", label: "CTR", align: "text-right" },
     { key: "ad_count", label: "Anúncios", align: "text-center" },
     { key: "creator_count", label: "Creators", align: "text-center" },
-    { key: "product_names", label: "Produto", sortable: false },
     { key: "trend", label: "Tendência", align: "text-right" },
   ];
 
@@ -211,6 +240,8 @@ export function PautasTable({
     switch (key) {
       case "guideline_number":
         return `#${row.guideline_number}`;
+      case "product_names":
+        return row.product_names ?? "Não informado";
       case "spend":
         return formatCurrency(row.spend);
       case "revenue":
@@ -223,8 +254,6 @@ export function PautasTable({
         return String(row.ad_count);
       case "creator_count":
         return String(row.creator_count);
-      case "product_names":
-        return row.product_names ?? "Não informado";
       case "trend":
         return null;
       default:
@@ -280,6 +309,27 @@ export function PautasTable({
             ))}
           </SelectContent>
         </Select>
+
+        {availableProducts.length > 0 && (
+          <>
+            <label className="text-sm font-medium text-muted-foreground">
+              Produto:
+            </label>
+            <Select value={selectedProduct} onValueChange={handleProductChange}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Todos os produtos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os produtos</SelectItem>
+                {availableProducts.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
 
         <label className="text-sm font-medium text-muted-foreground">
           Pautas:

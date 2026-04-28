@@ -1,4 +1,9 @@
-import { getBrands, getGuidelineMetrics, getAvailableMonths } from "./actions";
+import {
+  getBrands,
+  getGuidelineMetrics,
+  getAvailableMonths,
+  getDistinctProducts,
+} from "./actions";
 import { PautasTable } from "@/components/pautas-table";
 
 export default async function PautasPage({
@@ -14,15 +19,17 @@ export default async function PautasPage({
 
   let metrics: Awaited<ReturnType<typeof getGuidelineMetrics>> = [];
   let months: Awaited<ReturnType<typeof getAvailableMonths>> = [];
+  let products: string[] = [];
 
   if (selectedBrandId) {
     try {
-      [metrics, months] = await Promise.all([
+      [metrics, months, products] = await Promise.all([
         getGuidelineMetrics(selectedBrandId),
         getAvailableMonths(selectedBrandId),
+        getDistinctProducts(selectedBrandId),
       ]);
-    } catch {
-      // RPC functions may not exist yet (e.g. local dev before migration)
+    } catch (err) {
+      console.error("Failed to load pautas dashboard data:", err);
     }
   }
 
@@ -36,6 +43,7 @@ export default async function PautasPage({
         initialBrandId={selectedBrandId}
         initialData={metrics}
         initialMonths={months}
+        initialProducts={products}
       />
     </div>
   );
