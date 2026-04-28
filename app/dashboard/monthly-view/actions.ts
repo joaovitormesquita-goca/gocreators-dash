@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { spendViewFiltersSchema } from "@/lib/schemas/spend-view";
 import { getCreatorsByBrand as _getCreatorsByBrand } from "@/lib/queries/creators";
+import { getDistinctProducts as _getDistinctProducts } from "@/lib/queries/products";
 
 export async function getCreatorsByBrand(brandId: number) {
   return _getCreatorsByBrand(brandId);
@@ -71,6 +72,7 @@ export async function getMonthlySpendView(params: {
   creatorIds?: number[];
   startDate: string;
   endDate: string;
+  productNames?: string[];
 }): Promise<MonthlySpendRow[]> {
   const parsed = spendViewFiltersSchema.safeParse(params);
   if (!parsed.success) {
@@ -83,8 +85,15 @@ export async function getMonthlySpendView(params: {
     p_creator_ids: parsed.data.creatorIds ?? null,
     p_start_date: parsed.data.startDate,
     p_end_date: parsed.data.endDate,
+    p_product_names: params.productNames && params.productNames.length > 0
+      ? params.productNames
+      : null,
   });
 
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function getDistinctProducts(brandId: number): Promise<string[]> {
+  return _getDistinctProducts(brandId);
 }
