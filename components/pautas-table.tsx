@@ -428,11 +428,18 @@ export function PautasTable({
                     {columns.map((col) => (
                       <TableCell
                         key={col.key}
-                        className={`whitespace-nowrap ${col.align ?? ""} ${col.key === "roas" ? roasColor(row.roas) : ""}`}
+                        className={`whitespace-nowrap ${col.align ?? ""} ${col.key === "roas" ? roasColor(row.roas) : ""} ${col.key === "product_names" ? "max-w-[280px]" : ""}`}
                       >
                         {col.key === "trend" ? (
                           <span className={formatTrend(row).color}>
                             {formatTrend(row).text}
+                          </span>
+                        ) : col.key === "product_names" ? (
+                          <span
+                            className="block truncate"
+                            title={row.product_names ?? "Não informado"}
+                          >
+                            {row.product_names ?? "Não informado"}
                           </span>
                         ) : (
                           formatCell(row, col.key)

@@ -361,7 +361,10 @@ export function CreatorsTable({
                 sorted.map((row, i) => (
                   <TableRow key={rowKey(row, i)}>
                     {columns.map((col) => (
-                      <TableCell key={col.key} className="whitespace-nowrap">
+                      <TableCell
+                        key={col.key}
+                        className={`whitespace-nowrap ${col.key === "product_name" ? "max-w-[260px]" : ""}`}
+                      >
                         {col.key === "cost" && viewMode === "creator" && row.creator_brand_id != null ? (
                           <InlineEditCost
                             value={row.cost}
@@ -376,6 +379,13 @@ export function CreatorsTable({
                               if (originalIndex !== -1) handleCostSaved(originalIndex, newCost);
                             }}
                           />
+                        ) : col.key === "product_name" ? (
+                          <span
+                            className="block truncate"
+                            title={row.product_name ?? "Não informado"}
+                          >
+                            {row.product_name ?? "Não informado"}
+                          </span>
                         ) : (
                           formatCell(row, col.key)
                         )}
