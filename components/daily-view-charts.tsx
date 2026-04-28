@@ -17,6 +17,7 @@ import {
   CreatorMultiSelect,
   type CreatorOption,
 } from "@/components/creator-multi-select";
+import { ProductMultiSelect } from "@/components/product-multi-select";
 import {
   DatePeriodSelector,
   type DatePreset,
@@ -126,7 +127,7 @@ export function DailyViewCharts({
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
   const [products, setProducts] = useState<string[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<string>("all");
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
   useEffect(() => {
     if (selectedBrandId) {
@@ -146,17 +147,16 @@ export function DailyViewCharts({
   }, [selectedBrandId]);
 
   const fetchData = useCallback(
-    (brandId: number, creatorIds: number[], range: { from: Date; to: Date }, product: string) => {
+    (brandId: number, creatorIds: number[], range: { from: Date; to: Date }, productNames: string[]) => {
       startTransition(async () => {
         const allSelected = creatorIds.length === 0;
-        const productNames = product === "all" ? undefined : [product];
         const [rows, brandGoals] = await Promise.all([
           getDailySpendView({
             brandId,
             creatorIds: allSelected ? undefined : creatorIds,
             startDate: format(range.from, "yyyy-MM-dd"),
             endDate: format(range.to, "yyyy-MM-dd"),
-            productNames,
+            productNames: productNames.length === 0 ? undefined : productNames,
           }),
           getGoalsForBrand(
             brandId,
@@ -175,7 +175,7 @@ export function DailyViewCharts({
     const brandId = Number(value);
     setSelectedBrandId(brandId);
     setSelectedGroupId("all");
-    setSelectedProduct("all");
+    setSelectedProducts([]);
     router.push(`/dashboard/daily-view?brand=${brandId}`);
     startTransition(async () => {
       const newCreators = await getCreatorsByBrand(brandId);
@@ -210,7 +210,7 @@ export function DailyViewCharts({
       setCreators(filteredCreators);
       const allIds = filteredCreators.map((c) => c.id);
       setSelectedCreatorIds(allIds);
-      const productNames = selectedProduct === "all" ? undefined : [selectedProduct];
+      const productNames = selectedProducts.length === 0 ? undefined : selectedProducts;
       const [rows, brandGoals] = await Promise.all([
         getDailySpendView({
           brandId: selectedBrandId,
@@ -230,24 +230,24 @@ export function DailyViewCharts({
     });
   }
 
-  function handleProductChange(value: string) {
-    setSelectedProduct(value);
+  function handleProductsChange(values: string[]) {
+    setSelectedProducts(values);
     if (selectedBrandId) {
-      fetchData(selectedBrandId, selectedCreatorIds, dateRange, value);
+      fetchData(selectedBrandId, selectedCreatorIds, dateRange, values);
     }
   }
 
   function handleCreatorChange(ids: number[]) {
     setSelectedCreatorIds(ids);
     if (selectedBrandId) {
-      fetchData(selectedBrandId, ids, dateRange, selectedProduct);
+      fetchData(selectedBrandId, ids, dateRange, selectedProducts);
     }
   }
 
   function handleDateChange(range: { from: Date; to: Date }) {
     setDateRange(range);
     if (selectedBrandId) {
-      fetchData(selectedBrandId, selectedCreatorIds, range, selectedProduct);
+      fetchData(selectedBrandId, selectedCreatorIds, range, selectedProducts);
     }
   }
 
@@ -301,19 +301,12 @@ export function DailyViewCharts({
         />
 
         {products.length > 0 && (
-          <Select value={selectedProduct} onValueChange={handleProductChange}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Todos os produtos" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os produtos</SelectItem>
-              {products.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ProductMultiSelect
+            products={products}
+            selected={selectedProducts}
+            onSelectionChange={handleProductsChange}
+            disabled={isPending}
+          />
         )}
       </div>
 

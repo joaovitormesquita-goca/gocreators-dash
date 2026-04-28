@@ -23,6 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { ProductMultiSelect } from "@/components/product-multi-select";
 import {
   getGuidelineMetrics,
   getAvailableMonths,
@@ -107,7 +108,7 @@ export function PautasTable({
   const [availableMonths, setAvailableMonths] = useState(initialMonths);
   const [availableProducts, setAvailableProducts] = useState(initialProducts);
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
-  const [selectedProduct, setSelectedProduct] = useState<string>("all");
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
   const [sortKey, setSortKey] = useState<SortKey>("roas");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -124,7 +125,7 @@ export function PautasTable({
     lastFetchedBrandRef.current = selectedBrandId;
     if (!selectedBrandId) return;
     setSelectedMonth("all");
-    setSelectedProduct("all");
+    setSelectedProducts([]);
     setSelectedGuidelines(new Set());
     startTransition(async () => {
       try {
@@ -159,9 +160,9 @@ export function PautasTable({
     });
   }
 
-  function refetch(brandId: number, month: string, product: string) {
+  function refetch(brandId: number, month: string, products: string[]) {
     const monthArg = month === "all" ? undefined : month;
-    const productArg = product === "all" ? undefined : [product];
+    const productArg = products.length === 0 ? undefined : products;
     startTransition(async () => {
       try {
         const data = await getGuidelineMetrics(brandId, monthArg, productArg);
@@ -180,13 +181,13 @@ export function PautasTable({
   function handleMonthChange(value: string) {
     setSelectedMonth(value);
     setSelectedGuidelines(new Set());
-    if (selectedBrandId) refetch(selectedBrandId, value, selectedProduct);
+    if (selectedBrandId) refetch(selectedBrandId, value, selectedProducts);
   }
 
-  function handleProductChange(value: string) {
-    setSelectedProduct(value);
+  function handleProductsChange(values: string[]) {
+    setSelectedProducts(values);
     setSelectedGuidelines(new Set());
-    if (selectedBrandId) refetch(selectedBrandId, selectedMonth, value);
+    if (selectedBrandId) refetch(selectedBrandId, selectedMonth, values);
   }
 
   function handleSort(key: SortKey) {
@@ -315,19 +316,11 @@ export function PautasTable({
             <label className="text-sm font-medium text-muted-foreground">
               Produto:
             </label>
-            <Select value={selectedProduct} onValueChange={handleProductChange}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Todos os produtos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os produtos</SelectItem>
-                {availableProducts.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ProductMultiSelect
+              products={availableProducts}
+              selected={selectedProducts}
+              onSelectionChange={handleProductsChange}
+            />
           </>
         )}
 
