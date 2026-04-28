@@ -1,24 +1,12 @@
-CREATE OR REPLACE FUNCTION get_creator_metrics(
-  p_brand_id bigint,
-  p_view_mode text DEFAULT 'creator'
-)
-RETURNS TABLE (
-  creator text,
-  creator_brand_id bigint,
-  group_id bigint,
-  product_name text,
-  month timestamptz,
-  spend_total numeric,
-  roas_total numeric,
-  ctr_total numeric,
-  spend_recentes numeric,
-  roas_recentes numeric,
-  ctr_recentes numeric,
-  cost numeric,
-  yearly_spend numeric
-)
-LANGUAGE plpgsql STABLE
-AS $$
+drop function if exists "public"."get_creator_metrics"(p_brand_id bigint, p_view_mode text);
+
+set check_function_bodies = off;
+
+CREATE OR REPLACE FUNCTION public.get_creator_metrics(p_brand_id bigint, p_view_mode text DEFAULT 'creator'::text)
+ RETURNS TABLE(creator text, creator_brand_id bigint, group_id bigint, product_name text, month timestamp with time zone, spend_total numeric, roas_total numeric, ctr_total numeric, spend_recentes numeric, roas_recentes numeric, ctr_recentes numeric, cost numeric, yearly_spend numeric)
+ LANGUAGE plpgsql
+ STABLE
+AS $function$
 BEGIN
   IF p_view_mode = 'product' THEN
     RETURN QUERY
@@ -163,4 +151,7 @@ BEGIN
       ORDER BY c.full_name, month DESC;
   END IF;
 END;
-$$;
+$function$
+;
+
+

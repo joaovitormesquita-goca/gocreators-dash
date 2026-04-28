@@ -2,7 +2,8 @@ CREATE OR REPLACE FUNCTION get_monthly_spend_view(
   p_brand_id bigint,
   p_creator_ids bigint[] DEFAULT NULL,
   p_start_date date DEFAULT NULL,
-  p_end_date date DEFAULT NULL
+  p_end_date date DEFAULT NULL,
+  p_product_names text[] DEFAULT NULL
 )
 RETURNS TABLE (
   month date,
@@ -28,6 +29,7 @@ AS $$
       AND (p_creator_ids IS NULL OR c.id = ANY(p_creator_ids))
       AND (p_start_date IS NULL OR am.date >= p_start_date)
       AND (p_end_date IS NULL OR am.date <= p_end_date)
+      AND (p_product_names IS NULL OR cr.product_name = ANY(p_product_names))
     GROUP BY date_trunc('month', am.date)::date
   ),
   brand_spend AS (

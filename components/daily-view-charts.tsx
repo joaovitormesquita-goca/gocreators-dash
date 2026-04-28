@@ -25,7 +25,8 @@ import {
   SpendShareChart,
   type SpendShareDataPoint,
 } from "@/components/spend-share-chart";
-import { getDailySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, type DailySpendRow, type GroupOption } from "@/app/dashboard/daily-view/actions";
+import { toast } from "sonner";
+import { getDailySpendView, getCreatorsByBrand, getGroupsByBrand, getCreatorsByBrandAndGroup, getDistinctProducts, type DailySpendRow, type GroupOption } from "@/app/dashboard/daily-view/actions";
 import { getGoalsForBrand, type BrandGoalRow } from "@/app/dashboard/brands/actions";
 
 type Brand = { id: number; name: string };
@@ -124,25 +125,38 @@ export function DailyViewCharts({
   const [goals, setGoals] = useState<BrandGoalRow[]>(initialGoals);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
+  const [products, setProducts] = useState<string[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<string>("all");
 
   useEffect(() => {
     if (selectedBrandId) {
-      getGroupsByBrand(selectedBrandId).then(setGroups);
+      Promise.all([
+        getGroupsByBrand(selectedBrandId),
+        getDistinctProducts(selectedBrandId),
+      ])
+        .then(([grps, prods]) => {
+          setGroups(grps);
+          setProducts(prods);
+        })
+        .catch(() => toast.error("Erro ao carregar filtros"));
     } else {
       setGroups([]);
+      setProducts([]);
     }
   }, [selectedBrandId]);
 
   const fetchData = useCallback(
-    (brandId: number, creatorIds: number[], range: { from: Date; to: Date }) => {
+    (brandId: number, creatorIds: number[], range: { from: Date; to: Date }, product: string) => {
       startTransition(async () => {
         const allSelected = creatorIds.length === 0;
+        const productNames = product === "all" ? undefined : [product];
         const [rows, brandGoals] = await Promise.all([
           getDailySpendView({
             brandId,
             creatorIds: allSelected ? undefined : creatorIds,
             startDate: format(range.from, "yyyy-MM-dd"),
             endDate: format(range.to, "yyyy-MM-dd"),
+            productNames,
           }),
           getGoalsForBrand(
             brandId,
@@ -161,6 +175,7 @@ export function DailyViewCharts({
     const brandId = Number(value);
     setSelectedBrandId(brandId);
     setSelectedGroupId("all");
+    setSelectedProduct("all");
     router.push(`/dashboard/daily-view?brand=${brandId}`);
     startTransition(async () => {
       const newCreators = await getCreatorsByBrand(brandId);
@@ -195,12 +210,14 @@ export function DailyViewCharts({
       setCreators(filteredCreators);
       const allIds = filteredCreators.map((c) => c.id);
       setSelectedCreatorIds(allIds);
+      const productNames = selectedProduct === "all" ? undefined : [selectedProduct];
       const [rows, brandGoals] = await Promise.all([
         getDailySpendView({
           brandId: selectedBrandId,
           creatorIds: allIds.length > 0 ? allIds : undefined,
           startDate: format(dateRange.from, "yyyy-MM-dd"),
           endDate: format(dateRange.to, "yyyy-MM-dd"),
+          productNames,
         }),
         getGoalsForBrand(
           selectedBrandId,
@@ -213,17 +230,24 @@ export function DailyViewCharts({
     });
   }
 
+  function handleProductChange(value: string) {
+    setSelectedProduct(value);
+    if (selectedBrandId) {
+      fetchData(selectedBrandId, selectedCreatorIds, dateRange, value);
+    }
+  }
+
   function handleCreatorChange(ids: number[]) {
     setSelectedCreatorIds(ids);
     if (selectedBrandId) {
-      fetchData(selectedBrandId, ids, dateRange);
+      fetchData(selectedBrandId, ids, dateRange, selectedProduct);
     }
   }
 
   function handleDateChange(range: { from: Date; to: Date }) {
     setDateRange(range);
     if (selectedBrandId) {
-      fetchData(selectedBrandId, selectedCreatorIds, range);
+      fetchData(selectedBrandId, selectedCreatorIds, range, selectedProduct);
     }
   }
 
@@ -275,6 +299,22 @@ export function DailyViewCharts({
           onSelectionChange={handleCreatorChange}
           disabled={isPending}
         />
+
+        {products.length > 0 && (
+          <Select value={selectedProduct} onValueChange={handleProductChange}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Todos os produtos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os produtos</SelectItem>
+              {products.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <DatePeriodSelector

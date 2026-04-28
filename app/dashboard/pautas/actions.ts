@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getBrands as _getBrands } from "@/lib/queries/brands";
+import { getDistinctProducts as _getDistinctProducts } from "@/lib/queries/products";
 
 export async function getBrands() {
   return _getBrands();
@@ -17,17 +18,21 @@ export type GuidelineMetric = {
   ad_count: number;
   prev_roas: number | null;
   prev_month: string | null;
+  product_names: string | null;
 };
 
 export async function getGuidelineMetrics(
   brandId: number,
   month?: string,
+  productNames?: string[],
 ): Promise<GuidelineMetric[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("get_guideline_metrics", {
     p_brand_id: brandId,
     p_month: month ?? null,
+    p_product_names:
+      productNames && productNames.length > 0 ? productNames : null,
   });
 
   if (error) throw new Error(error.message);
@@ -43,4 +48,8 @@ export async function getAvailableMonths(brandId: number): Promise<string[]> {
 
   if (error) throw new Error(error.message);
   return (data ?? []).map((row: { month: string }) => row.month);
+}
+
+export async function getDistinctProducts(brandId: number): Promise<string[]> {
+  return _getDistinctProducts(brandId);
 }

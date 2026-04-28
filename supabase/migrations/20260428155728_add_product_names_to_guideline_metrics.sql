@@ -1,22 +1,12 @@
-CREATE OR REPLACE FUNCTION get_guideline_metrics(
-  p_brand_id bigint,
-  p_month text DEFAULT NULL,
-  p_product_names text[] DEFAULT NULL
-)
-RETURNS TABLE (
-  guideline_number integer,
-  spend numeric,
-  revenue numeric,
-  roas numeric,
-  ctr numeric,
-  creator_count bigint,
-  ad_count bigint,
-  prev_roas numeric,
-  prev_month text,
-  product_names text
-)
-LANGUAGE sql STABLE
-AS $$
+drop function if exists "public"."get_guideline_metrics"(p_brand_id bigint, p_month text, p_product_names text[]);
+
+set check_function_bodies = off;
+
+CREATE OR REPLACE FUNCTION public.get_guideline_metrics(p_brand_id bigint, p_month text DEFAULT NULL::text, p_product_names text[] DEFAULT NULL::text[])
+ RETURNS TABLE(guideline_number integer, spend numeric, revenue numeric, roas numeric, ctr numeric, creator_count bigint, ad_count bigint, prev_roas numeric, prev_month text, product_names text)
+ LANGUAGE sql
+ STABLE
+AS $function$
   WITH monthly_roas AS (
     SELECT
       cr.guideline_number,
@@ -67,17 +57,7 @@ AS $$
     AND (p_product_names IS NULL OR cr.product_name = ANY(p_product_names))
   GROUP BY cr.guideline_number, pd.prev_roas, pd.prev_month
   ORDER BY roas DESC;
-$$;
+$function$
+;
 
-CREATE OR REPLACE FUNCTION get_guideline_available_months(p_brand_id bigint)
-RETURNS TABLE (month text)
-LANGUAGE sql STABLE
-AS $$
-  SELECT DISTINCT to_char(am.date, 'YYYY-MM') AS month
-  FROM ad_metrics am
-  JOIN creatives cr ON cr.id = am.creative_id
-  JOIN creator_brands cb ON cb.id = cr.creator_brand_id
-  WHERE cb.brand_id = p_brand_id
-    AND cr.guideline_number IS NOT NULL
-  ORDER BY month DESC;
-$$;
+
