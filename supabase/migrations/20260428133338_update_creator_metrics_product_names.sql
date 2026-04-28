@@ -1,20 +1,12 @@
-CREATE OR REPLACE FUNCTION get_creator_metrics(p_brand_id bigint)
-RETURNS TABLE (
-  creator text,
-  creator_brand_id bigint,
-  month timestamptz,
-  spend_total numeric,
-  roas_total numeric,
-  ctr_total numeric,
-  spend_recentes numeric,
-  roas_recentes numeric,
-  ctr_recentes numeric,
-  cost numeric,
-  yearly_spend numeric,
-  product_names text
-)
-LANGUAGE sql STABLE
-AS $$
+drop function if exists "public"."get_creator_metrics"(p_brand_id bigint);
+
+set check_function_bodies = off;
+
+CREATE OR REPLACE FUNCTION public.get_creator_metrics(p_brand_id bigint)
+ RETURNS TABLE(creator text, creator_brand_id bigint, month timestamp with time zone, spend_total numeric, roas_total numeric, ctr_total numeric, spend_recentes numeric, roas_recentes numeric, ctr_recentes numeric, cost numeric, yearly_spend numeric, product_names text)
+ LANGUAGE sql
+ STABLE
+AS $function$
   SELECT
     c.full_name AS creator,
     cb.id AS creator_brand_id,
@@ -63,4 +55,7 @@ AS $$
   WHERE cb.brand_id = p_brand_id
   GROUP BY c.full_name, cb.id, date_trunc('month', am.date), cc.cost
   ORDER BY c.full_name, month DESC;
-$$;
+$function$
+;
+
+

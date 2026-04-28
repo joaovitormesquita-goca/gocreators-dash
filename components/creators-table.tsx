@@ -148,9 +148,10 @@ export function CreatorsTable({
     );
   }
 
-  const columns: { key: SortKey; label: string }[] = [
+  const columns: { key: SortKey; label: string; sortable?: boolean }[] = [
     { key: "month", label: "Mês/Ano" },
     { key: "creator", label: "Creator" },
+    { key: "product_names", label: "Produto", sortable: false },
     { key: "cost", label: "Custo" },
     { key: "yearly_spend", label: "Investimento Ano" },
     { key: "spend_total", label: "Gasto" },
@@ -167,16 +168,18 @@ export function CreatorsTable({
         return formatMonth(row.month);
       case "creator":
         return row.creator;
+      case "product_names":
+        return row.product_names ?? "Não informado";
       case "spend_total":
       case "spend_recentes":
       case "yearly_spend":
-        return formatCurrency(row[key]);
+        return formatCurrency(row[key] as number);
       case "roas_total":
       case "roas_recentes":
-        return formatRoas(row[key]);
+        return formatRoas(row[key] as number);
       case "ctr_total":
       case "ctr_recentes":
-        return formatCtr(row[key]);
+        return formatCtr(row[key] as number);
       default:
         return String(row[key] ?? "");
     }
@@ -254,11 +257,11 @@ export function CreatorsTable({
                 {columns.map((col) => (
                   <TableHead
                     key={col.key}
-                    className="cursor-pointer select-none whitespace-nowrap"
-                    onClick={() => handleSort(col.key)}
+                    className={`${col.sortable === false ? "" : "cursor-pointer"} select-none whitespace-nowrap`}
+                    onClick={() => { if (col.sortable !== false) handleSort(col.key); }}
                   >
                     {col.label}
-                    <SortIcon column={col.key} />
+                    {col.sortable !== false && <SortIcon column={col.key} />}
                   </TableHead>
                 ))}
               </TableRow>

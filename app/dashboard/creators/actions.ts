@@ -29,6 +29,7 @@ export type CreatorMetric = {
   ctr_recentes: number;
   cost: number | null;
   yearly_spend: number;
+  product_names: string | null;
 };
 
 export type GroupOption = {
