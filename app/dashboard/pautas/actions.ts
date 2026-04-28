@@ -17,6 +17,7 @@ export type GuidelineMetric = {
   ad_count: number;
   prev_roas: number | null;
   prev_month: string | null;
+  product_names: string | null;
 };
 
 export async function getGuidelineMetrics(

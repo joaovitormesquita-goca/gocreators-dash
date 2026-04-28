@@ -195,7 +195,7 @@ export function PautasTable({
     });
   }, [metrics, sortKey, sortDir, selectedGuidelines]);
 
-  const columns: { key: SortKey; label: string; align?: string }[] = [
+  const columns: { key: SortKey; label: string; align?: string; sortable?: boolean }[] = [
     { key: "guideline_number", label: "Pauta" },
     { key: "spend", label: "Gasto", align: "text-right" },
     { key: "revenue", label: "Revenue", align: "text-right" },
@@ -203,6 +203,7 @@ export function PautasTable({
     { key: "ctr", label: "CTR", align: "text-right" },
     { key: "ad_count", label: "Anúncios", align: "text-center" },
     { key: "creator_count", label: "Creators", align: "text-center" },
+    { key: "product_names", label: "Produto", sortable: false },
     { key: "trend", label: "Tendência", align: "text-right" },
   ];
 
@@ -222,6 +223,8 @@ export function PautasTable({
         return String(row.ad_count);
       case "creator_count":
         return String(row.creator_count);
+      case "product_names":
+        return row.product_names ?? "Não informado";
       case "trend":
         return null;
       default:
@@ -340,11 +343,11 @@ export function PautasTable({
                 {columns.map((col) => (
                   <TableHead
                     key={col.key}
-                    className={`cursor-pointer select-none whitespace-nowrap ${col.align ?? ""}`}
-                    onClick={() => handleSort(col.key)}
+                    className={`${col.sortable === false ? "" : "cursor-pointer"} select-none whitespace-nowrap ${col.align ?? ""}`}
+                    onClick={() => { if (col.sortable !== false) handleSort(col.key); }}
                   >
                     {col.label}
-                    <SortIcon column={col.key} />
+                    {col.sortable !== false && <SortIcon column={col.key} />}
                   </TableHead>
                 ))}
               </TableRow>
