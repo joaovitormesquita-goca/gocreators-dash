@@ -7,6 +7,7 @@ create table if not exists "public"."creatives" (
   "ad_name" text,
   "guideline_number" integer,
   "created_at" timestamptz not null default now(),
+  "product_name" text,
 
   constraint "creatives_pkey" primary key ("id"),
   constraint "creatives_meta_ad_id_key" unique ("meta_ad_id"),
