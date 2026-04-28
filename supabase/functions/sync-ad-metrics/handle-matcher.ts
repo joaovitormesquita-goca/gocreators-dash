@@ -21,6 +21,6 @@ export function extractGuidelineNumber(adName: string): number | null {
 }
 
 export function extractProductName(adName: string): string | null {
-  const match = adName.match(/produto\s+([^-]+?)\s*(?:-|$)/i);
+  const match = adName.match(/\bproduto\s+([^-]+?)\s*(?:-|$)/i);
   return match ? match[1].trim() : null;
 }

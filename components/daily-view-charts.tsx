@@ -178,12 +178,8 @@ export function DailyViewCharts({
     setSelectedProduct("all");
     router.push(`/dashboard/daily-view?brand=${brandId}`);
     startTransition(async () => {
-      const [newCreators, newProducts] = await Promise.all([
-        getCreatorsByBrand(brandId),
-        getDistinctProducts(brandId),
-      ]);
+      const newCreators = await getCreatorsByBrand(brandId);
       setCreators(newCreators);
-      setProducts(newProducts);
       const allIds = newCreators.map((c) => c.id);
       setSelectedCreatorIds(allIds);
       const [rows, brandGoals] = await Promise.all([

@@ -23,6 +23,10 @@ Deno.test("extractProductName: case insensitive", () => {
   assertEquals(extractProductName("PRODUTO Linha PH - creator"), "Linha PH");
 });
 
+Deno.test("extractProductName: word boundary impede match em 'subproduto'", () => {
+  assertEquals(extractProductName("@creator - subproduto X - foo"), null);
+});
+
 Deno.test("extractGuidelineNumber: ainda funciona corretamente após a mudança", () => {
   assertEquals(
     extractGuidelineNumber("pauta 1245 - produto Linha PH"),
