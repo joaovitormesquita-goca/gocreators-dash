@@ -176,6 +176,28 @@ Deno.serve(async (_req: Request) => {
         .eq("id", syncLogId);
     }
 
+    // Notify Next.js to revalidate cache after scheduled ETL sync.
+    // Manual and backfill syncs are handled by their Server Actions directly.
+    if (trigger === "scheduled") {
+      const nextAppUrl = Deno.env.get("NEXT_APP_URL");
+      const revalidateSecret = Deno.env.get("REVALIDATE_SECRET");
+      if (nextAppUrl && revalidateSecret) {
+        try {
+          await fetch(`${nextAppUrl}/api/revalidate`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-revalidate-secret": revalidateSecret,
+            },
+            body: JSON.stringify({ tags: ["metrics", "sync-logs", "products"] }),
+          });
+        } catch (e) {
+          console.error("Failed to revalidate Next.js cache:", e);
+          // Non-fatal — sync data was written correctly even if cache invalidation fails
+        }
+      }
+    }
+
     return new Response(JSON.stringify({ results }), {
       headers: { "Content-Type": "application/json" },
     });
