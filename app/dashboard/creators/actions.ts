@@ -1,7 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/static";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { getBrands as _getBrands } from "@/lib/queries/brands";
 import {
   bulkCostImportSchema,
@@ -39,19 +42,69 @@ export type GroupOption = {
   name: string;
 };
 
-export async function getGroupsByBrand(
+const _getGroupsByBrandCached = unstable_cache(
+  async (brandId: number): Promise<GroupOption[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("creator_groups")
+      .select("id, name")
+      .eq("brand_id", brandId)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+  ["groups-by-brand"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
+
+export async function getGroupsByBrand(brandId: number): Promise<GroupOption[]> {
+  return _getGroupsByBrandCached(brandId);
+}
+
+const _getCreatorBrandsForBrandCached = unstable_cache(
+  async (brandId: number): Promise<{ creatorBrandId: number; creatorName: string; brandName: string }[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("creator_brands")
+      .select("id, creators(full_name), brands(name)")
+      .eq("brand_id", brandId);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((cb) => ({
+      creatorBrandId: cb.id,
+      creatorName:
+        (cb.creators as unknown as { full_name: string })?.full_name ?? "",
+      brandName: (cb.brands as unknown as { name: string })?.name ?? "",
+    }));
+  },
+  ["creator-brands-for-brand"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
+
+export async function getCreatorBrandsForBrand(
   brandId: number,
-): Promise<GroupOption[]> {
-  const supabase = await createClient();
+): Promise<{ creatorBrandId: number; creatorName: string; brandName: string }[]> {
+  return _getCreatorBrandsForBrandCached(brandId);
+}
 
-  const { data, error } = await supabase
-    .from("creator_groups")
-    .select("id, name")
-    .eq("brand_id", brandId)
-    .order("name");
+const _getCreatorMetricsCached = unstable_cache(
+  async (brandId: number, viewMode: CreatorViewMode): Promise<CreatorMetric[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase.rpc("get_creator_metrics", {
+      p_brand_id: brandId,
+      p_view_mode: viewMode,
+    });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+  ["creator-metrics"],
+  { tags: [CACHE_TAGS.METRICS, CACHE_TAGS.COSTS] },
+);
 
-  if (error) throw new Error(error.message);
-  return data ?? [];
+export async function getCreatorMetrics(
+  brandId: number,
+  viewMode: CreatorViewMode = "creator",
+): Promise<CreatorMetric[]> {
+  return _getCreatorMetricsCached(brandId, viewMode);
 }
 
 export async function syncAdMetrics() {
@@ -64,43 +117,10 @@ export async function syncAdMetrics() {
     return { success: false as const, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.METRICS);
+  revalidateTag(CACHE_TAGS.SYNC_LOGS);
   revalidatePath("/dashboard/sync");
   return { success: true as const, results: data };
-}
-
-export async function getCreatorBrandsForBrand(
-  brandId: number,
-): Promise<{ creatorBrandId: number; creatorName: string; brandName: string }[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("creator_brands")
-    .select("id, creators(full_name), brands(name)")
-    .eq("brand_id", brandId);
-
-  if (error) throw new Error(error.message);
-
-  return (data ?? []).map((cb) => ({
-    creatorBrandId: cb.id,
-    creatorName:
-      (cb.creators as unknown as { full_name: string })?.full_name ?? "",
-    brandName: (cb.brands as unknown as { name: string })?.name ?? "",
-  }));
-}
-
-export async function getCreatorMetrics(
-  brandId: number,
-  viewMode: CreatorViewMode = "creator",
-): Promise<CreatorMetric[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.rpc("get_creator_metrics", {
-    p_brand_id: brandId,
-    p_view_mode: viewMode,
-  });
-
-  if (error) throw new Error(error.message);
-  return data ?? [];
 }
 
 export async function exportCostCsvBase(
@@ -173,6 +193,8 @@ export async function importCreatorCosts(
 
   if (error) return { success: false, error: error.message };
 
+  revalidateTag(CACHE_TAGS.COSTS);
+  revalidateTag(CACHE_TAGS.METRICS);
   revalidatePath("/dashboard/creators");
   return { success: true, importedCount: rows.length };
 }
@@ -200,6 +222,8 @@ export async function upsertCreatorCost(
 
   if (error) return { success: false, error: error.message };
 
+  revalidateTag(CACHE_TAGS.COSTS);
+  revalidateTag(CACHE_TAGS.METRICS);
   revalidatePath("/dashboard/creators");
   return { success: true };
 }
