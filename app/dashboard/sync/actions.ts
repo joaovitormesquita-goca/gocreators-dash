@@ -1,6 +1,8 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { unstable_cache } from "next/cache";
+import { createStaticClient } from "@/lib/supabase/static";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 
 export type SyncLog = {
   id: string;
@@ -15,14 +17,17 @@ export type SyncLog = {
   error_message: string | null;
 };
 
-export async function getSyncLogs(): Promise<SyncLog[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("sync_logs")
-    .select("*")
-    .order("started_at", { ascending: false })
-    .limit(50);
-
-  if (error) throw new Error(error.message);
-  return data ?? [];
-}
+export const getSyncLogs = unstable_cache(
+  async (): Promise<SyncLog[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("sync_logs")
+      .select("*")
+      .order("started_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+  ["sync-logs"],
+  { tags: [CACHE_TAGS.SYNC_LOGS] },
+);

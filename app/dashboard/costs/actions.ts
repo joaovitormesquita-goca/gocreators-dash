@@ -1,7 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/static";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { getBrands as _getBrands } from "@/lib/queries/brands";
 import {
   bulkCostImportWithMonthSchema,
@@ -24,21 +26,27 @@ export type CostMatrixRow = {
   cost: number | null;
 };
 
+const _getCostMatrixCached = unstable_cache(
+  async (brandId: number, monthFrom: string | null, monthTo: string | null): Promise<CostMatrixRow[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase.rpc("get_cost_matrix", {
+      p_brand_id: brandId,
+      p_month_from: monthFrom,
+      p_month_to: monthTo,
+    });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+  ["cost-matrix"],
+  { tags: [CACHE_TAGS.COSTS, CACHE_TAGS.BRANDS] },
+);
+
 export async function getCostMatrix(
   brandId: number,
   monthFrom?: string,
   monthTo?: string,
 ): Promise<CostMatrixRow[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase.rpc("get_cost_matrix", {
-    p_brand_id: brandId,
-    p_month_from: monthFrom ?? null,
-    p_month_to: monthTo ?? null,
-  });
-
-  if (error) throw new Error(error.message);
-  return data ?? [];
+  return _getCostMatrixCached(brandId, monthFrom ?? null, monthTo ?? null);
 }
 
 export type CreatorForBrand = {
@@ -49,26 +57,29 @@ export type CreatorForBrand = {
   endDate: string | null;
 };
 
-export async function getCreatorsForBrand(
-  brandId: number,
-): Promise<CreatorForBrand[]> {
-  const supabase = await createClient();
+const _getCreatorsForBrandCached = unstable_cache(
+  async (brandId: number): Promise<CreatorForBrand[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("creator_brands")
+      .select("id, start_date, end_date, creators(full_name), brands(name)")
+      .eq("brand_id", brandId);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((cb) => ({
+      creatorBrandId: cb.id,
+      creatorName:
+        (cb.creators as unknown as { full_name: string })?.full_name ?? "",
+      brandName: (cb.brands as unknown as { name: string })?.name ?? "",
+      startDate: cb.start_date,
+      endDate: cb.end_date,
+    }));
+  },
+  ["creators-for-brand"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
 
-  const { data, error } = await supabase
-    .from("creator_brands")
-    .select("id, start_date, end_date, creators(full_name), brands(name)")
-    .eq("brand_id", brandId);
-
-  if (error) throw new Error(error.message);
-
-  return (data ?? []).map((cb) => ({
-    creatorBrandId: cb.id,
-    creatorName:
-      (cb.creators as unknown as { full_name: string })?.full_name ?? "",
-    brandName: (cb.brands as unknown as { name: string })?.name ?? "",
-    startDate: cb.start_date,
-    endDate: cb.end_date,
-  }));
+export async function getCreatorsForBrand(brandId: number): Promise<CreatorForBrand[]> {
+  return _getCreatorsForBrandCached(brandId);
 }
 
 export async function exportCostCsvFromMatrix(
@@ -120,6 +131,8 @@ export async function importCreatorCostsWithMonth(
 
   if (error) return { success: false, error: error.message };
 
+  revalidateTag(CACHE_TAGS.COSTS);
+  revalidateTag(CACHE_TAGS.METRICS);
   revalidatePath("/dashboard/costs");
   revalidatePath("/dashboard/creators");
   return { success: true, importedCount: rows.length };
@@ -148,6 +161,8 @@ export async function upsertCreatorCost(
 
   if (error) return { success: false, error: error.message };
 
+  revalidateTag(CACHE_TAGS.COSTS);
+  revalidateTag(CACHE_TAGS.METRICS);
   revalidatePath("/dashboard/costs");
   revalidatePath("/dashboard/creators");
   return { success: true };
