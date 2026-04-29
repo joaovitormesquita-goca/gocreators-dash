@@ -1,7 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/static";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import {
   createCreatorSchema,
   editCreatorSchema,
@@ -19,7 +22,10 @@ import {
 } from "@/lib/schemas/creator";
 
 function splitHandles(raw: string): string[] {
-  return raw.split(",").map((h) => h.trim()).filter(Boolean);
+  return raw
+    .split(",")
+    .map((h) => h.trim())
+    .filter(Boolean);
 }
 
 export type CreatorBrand = {
@@ -38,57 +44,87 @@ export type CreatorWithBrands = {
   brands: CreatorBrand[];
 };
 
-export async function getCreatorsWithBrands(): Promise<CreatorWithBrands[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("creators")
-    .select(
-      `
-      id,
-      full_name,
-      email,
-      creator_brands (
+export const getCreatorsWithBrands = unstable_cache(
+  async (): Promise<CreatorWithBrands[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("creators")
+      .select(
+        `
         id,
-        brand_id,
-        handles,
-        start_date,
-        group_id,
-        brands ( id, name )
+        full_name,
+        email,
+        creator_brands (
+          id,
+          brand_id,
+          handles,
+          start_date,
+          group_id,
+          brands ( id, name )
+        )
+      `,
       )
-    `,
-    )
-    .order("full_name");
+      .order("full_name");
 
-  if (error) throw new Error(error.message);
+    if (error) throw new Error(error.message);
 
-  return (data ?? []).map((creator) => ({
-    id: creator.id,
-    full_name: creator.full_name,
-    email: creator.email,
-    brands: (creator.creator_brands ?? []).map((cb: Record<string, unknown>) => {
-      const brand = cb.brands as { id: number; name: string } | null;
-      return {
-        id: brand?.id ?? 0,
-        assignmentId: cb.id as number,
-        name: brand?.name ?? "",
-        handles: (cb.handles as string[]) ?? [],
-        start_date: cb.start_date as string | null,
-        group_id: (cb.group_id as number | null) ?? null,
-      };
-    }),
-  }));
-}
+    return (data ?? []).map((creator) => ({
+      id: creator.id,
+      full_name: creator.full_name,
+      email: creator.email,
+      brands: (creator.creator_brands ?? []).map((cb: Record<string, unknown>) => {
+        const brand = cb.brands as { id: number; name: string } | null;
+        return {
+          id: brand?.id ?? 0,
+          assignmentId: cb.id as number,
+          name: brand?.name ?? "",
+          handles: (cb.handles as string[]) ?? [],
+          start_date: cb.start_date as string | null,
+          group_id: (cb.group_id as number | null) ?? null,
+        };
+      }),
+    }));
+  },
+  ["creators-with-brands"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
 
-export async function getBrandsForSelect() {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("brands")
-    .select("id, name")
-    .order("name");
+export const getBrandsForSelect = unstable_cache(
+  async () => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("brands")
+      .select("id, name")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return data;
+  },
+  ["brands-for-select"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
 
-  if (error) throw new Error(error.message);
-  return data;
+const _getGroupsByBrandCached = unstable_cache(
+  async (brandId: number): Promise<{ id: number; name: string }[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("creator_groups")
+      .select("id, name")
+      .eq("brand_id", brandId)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+  ["groups-by-brand-list"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
+
+export type GroupOption = {
+  id: number;
+  name: string;
+};
+
+export async function getGroupsByBrand(brandId: number): Promise<GroupOption[]> {
+  return _getGroupsByBrandCached(brandId);
 }
 
 type ActionResult =
@@ -139,6 +175,8 @@ export async function createCreatorWithBrands(
     return { success: false, error: brandsError.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
+  revalidateTag(CACHE_TAGS.METRICS);
   revalidatePath("/dashboard/creators/list");
   return { success: true, creatorId: creator.id };
 }
@@ -154,7 +192,6 @@ export async function updateCreator(
   const { creatorId, fullName, email, brandAssignments } = parsed.data;
   const supabase = await createClient();
 
-  // Update creator info
   const { error: creatorError } = await supabase
     .from("creators")
     .update({ full_name: fullName, email: email || null })
@@ -164,7 +201,6 @@ export async function updateCreator(
     return { success: false, error: creatorError.message };
   }
 
-  // Fetch current assignments to compute diff
   const { data: currentAssignments, error: fetchError } = await supabase
     .from("creator_brands")
     .select("id")
@@ -181,7 +217,6 @@ export async function updateCreator(
       .map((ba) => ba.assignmentId!),
   );
 
-  // Delete removed assignments
   const toDelete = [...currentIds].filter((id) => !submittedIds.has(id));
   if (toDelete.length > 0) {
     const { error: deleteError } = await supabase
@@ -194,7 +229,6 @@ export async function updateCreator(
     }
   }
 
-  // Update existing assignments
   for (const ba of brandAssignments.filter((ba) => ba.assignmentId !== undefined)) {
     const { error: updateError } = await supabase
       .from("creator_brands")
@@ -210,7 +244,6 @@ export async function updateCreator(
     }
   }
 
-  // Insert new assignments
   const toInsert = brandAssignments
     .filter((ba) => ba.assignmentId === undefined)
     .map((ba) => ({
@@ -231,6 +264,8 @@ export async function updateCreator(
     }
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
+  revalidateTag(CACHE_TAGS.METRICS);
   revalidatePath("/dashboard/creators/list");
   return { success: true };
 }
@@ -250,7 +285,6 @@ export async function bulkImportCreators(
   let linkedCount = 0;
   let handleAddedCount = 0;
 
-  // 1. Batch insert new creators
   if (newCreators.length > 0) {
     const { data: insertedCreators, error: creatorsError } = await supabase
       .from("creators")
@@ -266,7 +300,6 @@ export async function bulkImportCreators(
       return { success: false, error: creatorsError.message };
     }
 
-    // Create creator_brands for each new creator
     const brandRows = (insertedCreators ?? []).map((creator, i) => ({
       creator_id: creator.id,
       brand_id: brandId,
@@ -285,10 +318,8 @@ export async function bulkImportCreators(
     createdCount = insertedCreators?.length ?? 0;
   }
 
-  // 2. Link existing creators
   for (const link of existingCreatorLinks) {
     if (link.existingAssignmentId) {
-      // Already linked to this brand — append handle
       const { data: current, error: fetchErr } = await supabase
         .from("creator_brands")
         .select("handles")
@@ -316,7 +347,6 @@ export async function bulkImportCreators(
         handleAddedCount++;
       }
     } else {
-      // Not linked to this brand — create new creator_brands row
       const { error: insertErr } = await supabase
         .from("creator_brands")
         .insert({
@@ -334,30 +364,10 @@ export async function bulkImportCreators(
     }
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
+  revalidateTag(CACHE_TAGS.METRICS);
   revalidatePath("/dashboard/creators/list");
   return { success: true, createdCount, linkedCount, handleAddedCount, errors };
-}
-
-// --- Creator Group actions ---
-
-export type GroupOption = {
-  id: number;
-  name: string;
-};
-
-export async function getGroupsByBrand(
-  brandId: number,
-): Promise<GroupOption[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("creator_groups")
-    .select("id, name")
-    .eq("brand_id", brandId)
-    .order("name");
-
-  if (error) throw new Error(error.message);
-  return data ?? [];
 }
 
 export async function bulkUpdateCreatorBrandGroup(
@@ -379,6 +389,7 @@ export async function bulkUpdateCreatorBrandGroup(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/creators/list");
   return { success: true, count: parsed.data.creatorBrandIds.length };
 }
