@@ -103,7 +103,7 @@ const _getDailySpendViewCached = unstable_cache(
     return data ?? [];
   },
   ["daily-spend-view"],
-  { tags: [CACHE_TAGS.METRICS] },
+  { tags: [CACHE_TAGS.METRICS, CACHE_TAGS.BRANDS] },
 );
 
 export async function getDailySpendView(params: {

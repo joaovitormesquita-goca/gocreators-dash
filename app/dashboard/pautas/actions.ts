@@ -39,7 +39,7 @@ const _getGuidelineMetricsCached = unstable_cache(
     return data ?? [];
   },
   ["guideline-metrics"],
-  { tags: [CACHE_TAGS.METRICS] },
+  { tags: [CACHE_TAGS.METRICS, CACHE_TAGS.BRANDS] },
 );
 
 export async function getGuidelineMetrics(

@@ -38,7 +38,7 @@ const _getCostMatrixCached = unstable_cache(
     return data ?? [];
   },
   ["cost-matrix"],
-  { tags: [CACHE_TAGS.COSTS] },
+  { tags: [CACHE_TAGS.COSTS, CACHE_TAGS.BRANDS] },
 );
 
 export async function getCostMatrix(

@@ -97,7 +97,7 @@ const _getCreatorMetricsCached = unstable_cache(
     return data ?? [];
   },
   ["creator-metrics"],
-  { tags: [CACHE_TAGS.METRICS, CACHE_TAGS.COSTS] },
+  { tags: [CACHE_TAGS.METRICS, CACHE_TAGS.COSTS, CACHE_TAGS.BRANDS] },
 );
 
 export async function getCreatorMetrics(

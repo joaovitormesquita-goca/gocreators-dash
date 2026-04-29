@@ -103,7 +103,7 @@ const _getMonthlySpendViewCached = unstable_cache(
     return data ?? [];
   },
   ["monthly-spend-view"],
-  { tags: [CACHE_TAGS.METRICS] },
+  { tags: [CACHE_TAGS.METRICS, CACHE_TAGS.BRANDS] },
 );
 
 export async function getMonthlySpendView(params: {

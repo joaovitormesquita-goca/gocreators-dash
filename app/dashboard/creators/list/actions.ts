@@ -390,6 +390,7 @@ export async function bulkUpdateCreatorBrandGroup(
   }
 
   revalidateTag(CACHE_TAGS.BRANDS);
+  revalidateTag(CACHE_TAGS.METRICS);
   revalidatePath("/dashboard/creators/list");
   return { success: true, count: parsed.data.creatorBrandIds.length };
 }

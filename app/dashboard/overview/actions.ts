@@ -24,7 +24,7 @@ const _getOverviewDataCached = unstable_cache(
     return data ?? [];
   },
   ["overview-data"],
-  { tags: [CACHE_TAGS.METRICS] },
+  { tags: [CACHE_TAGS.METRICS, CACHE_TAGS.BRANDS] },
 );
 
 export async function getOverviewData(params?: {
