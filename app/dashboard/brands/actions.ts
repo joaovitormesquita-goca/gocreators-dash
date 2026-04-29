@@ -1,7 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createStaticClient } from "@/lib/supabase/static";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import {
   createBrandSchema,
   editBrandSchema,
@@ -52,47 +54,118 @@ export type BrandGoal = {
   value: number;
 };
 
+export type BrandGoalRow = {
+  metric: "share_total" | "share_recent";
+  month: string;
+  value: number;
+};
+
 type ActionResult =
   | { success: true }
   | { success: false; error: string };
 
-export async function getBrandsWithAdAccounts(): Promise<BrandWithAdAccounts[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("brands")
-    .select(
-      `
-      id,
-      name,
-      ad_accounts (
+export const getBrandsWithAdAccounts = unstable_cache(
+  async (): Promise<BrandWithAdAccounts[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("brands")
+      .select(
+        `
         id,
         name,
-        meta_account_id
-      ),
-      creator_groups (
-        id,
-        name
+        ad_accounts (
+          id,
+          name,
+          meta_account_id
+        ),
+        creator_groups (
+          id,
+          name
+        )
+      `,
       )
-    `,
-    )
-    .order("name");
+      .order("name");
 
-  if (error) throw new Error(error.message);
+    if (error) throw new Error(error.message);
 
-  return (data ?? []).map((brand) => ({
-    id: brand.id,
-    name: brand.name,
-    ad_accounts: (brand.ad_accounts ?? []).map((aa: Record<string, unknown>) => ({
-      id: aa.id as number,
-      name: aa.name as string,
-      meta_account_id: aa.meta_account_id as string,
-    })),
-    groups: (brand.creator_groups ?? []).map((g: Record<string, unknown>) => ({
-      id: g.id as number,
-      name: g.name as string,
-    })),
-  }));
+    return (data ?? []).map((brand) => ({
+      id: brand.id,
+      name: brand.name,
+      ad_accounts: (brand.ad_accounts ?? []).map((aa: Record<string, unknown>) => ({
+        id: aa.id as number,
+        name: aa.name as string,
+        meta_account_id: aa.meta_account_id as string,
+      })),
+      groups: (brand.creator_groups ?? []).map((g: Record<string, unknown>) => ({
+        id: g.id as number,
+        name: g.name as string,
+      })),
+    }));
+  },
+  ["brands-with-ad-accounts"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
+
+const _getGoalsForBrandCached = unstable_cache(
+  async (brandId: number, startDate: string, endDate: string): Promise<BrandGoalRow[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("brand_goals")
+      .select("metric, month, value")
+      .eq("brand_id", brandId)
+      .gte("month", startDate)
+      .lte("month", endDate);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as BrandGoalRow[];
+  },
+  ["goals-for-brand"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
+
+export async function getGoalsForBrand(
+  brandId: number,
+  startDate: string,
+  endDate: string,
+): Promise<BrandGoalRow[]> {
+  return _getGoalsForBrandCached(brandId, startDate, endDate);
+}
+
+const _getBrandGoalsCached = unstable_cache(
+  async (brandId: number): Promise<BrandGoal[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("brand_goals")
+      .select("id, brand_id, metric, month, value")
+      .eq("brand_id", brandId)
+      .order("month", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as BrandGoal[];
+  },
+  ["brand-goals"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
+
+export async function getBrandGoals(brandId: number): Promise<BrandGoal[]> {
+  return _getBrandGoalsCached(brandId);
+}
+
+const _getGroupsByBrandCached = unstable_cache(
+  async (brandId: number): Promise<CreatorGroup[]> => {
+    const supabase = createStaticClient();
+    const { data, error } = await supabase
+      .from("creator_groups")
+      .select("id, name")
+      .eq("brand_id", brandId)
+      .order("name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  },
+  ["groups-by-brand-brands"],
+  { tags: [CACHE_TAGS.BRANDS] },
+);
+
+export async function getGroupsByBrand(brandId: number): Promise<CreatorGroup[]> {
+  return _getGroupsByBrandCached(brandId);
 }
 
 export async function createBrand(
@@ -113,6 +186,7 @@ export async function createBrand(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
@@ -136,6 +210,7 @@ export async function updateBrand(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
@@ -154,6 +229,7 @@ export async function deleteBrand(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
@@ -180,6 +256,7 @@ export async function createAdAccount(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
@@ -206,6 +283,7 @@ export async function updateAdAccount(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
@@ -224,11 +302,10 @@ export async function deleteAdAccount(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
-
-// --- Backfill actions ---
 
 export async function startBackfillChunk(
   input: BackfillChunkInput,
@@ -256,6 +333,9 @@ export async function startBackfillChunk(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.METRICS);
+  revalidateTag(CACHE_TAGS.SYNC_LOGS);
+
   const results = data?.results ?? [];
   const first = results[0];
 
@@ -272,23 +352,6 @@ export async function startBackfillChunk(
       accountSpendUpserted: first?.account_spend_upserted ?? 0,
     },
   };
-}
-
-// --- Creator Group actions ---
-
-export async function getGroupsByBrand(
-  brandId: number,
-): Promise<CreatorGroup[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("creator_groups")
-    .select("id, name")
-    .eq("brand_id", brandId)
-    .order("name");
-
-  if (error) throw new Error(error.message);
-  return data ?? [];
 }
 
 export async function createGroup(
@@ -312,6 +375,7 @@ export async function createGroup(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
@@ -338,6 +402,7 @@ export async function updateGroup(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
@@ -372,47 +437,9 @@ export async function deleteGroup(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
-}
-
-// --- Brand Goals actions ---
-
-export type BrandGoalRow = {
-  metric: "share_total" | "share_recent";
-  month: string;
-  value: number;
-};
-
-export async function getGoalsForBrand(
-  brandId: number,
-  startDate: string,
-  endDate: string,
-): Promise<BrandGoalRow[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("brand_goals")
-    .select("metric, month, value")
-    .eq("brand_id", brandId)
-    .gte("month", startDate)
-    .lte("month", endDate);
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as BrandGoalRow[];
-}
-
-export async function getBrandGoals(brandId: number): Promise<BrandGoal[]> {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("brand_goals")
-    .select("id, brand_id, metric, month, value")
-    .eq("brand_id", brandId)
-    .order("month", { ascending: false });
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as BrandGoal[];
 }
 
 export async function upsertBrandGoal(
@@ -442,6 +469,7 @@ export async function upsertBrandGoal(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
@@ -465,7 +493,7 @@ export async function deleteBrandGoal(
     return { success: false, error: error.message };
   }
 
+  revalidateTag(CACHE_TAGS.BRANDS);
   revalidatePath("/dashboard/brands");
   return { success: true };
 }
-
