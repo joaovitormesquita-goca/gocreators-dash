@@ -119,6 +119,7 @@ export async function syncAdMetrics() {
 
   revalidateTag(CACHE_TAGS.METRICS);
   revalidateTag(CACHE_TAGS.SYNC_LOGS);
+  revalidateTag(CACHE_TAGS.PRODUCTS);
   revalidatePath("/dashboard/sync");
   revalidatePath("/dashboard/creators");
   return { success: true as const, results: data };

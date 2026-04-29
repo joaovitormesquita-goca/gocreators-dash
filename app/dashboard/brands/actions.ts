@@ -335,6 +335,7 @@ export async function startBackfillChunk(
 
   revalidateTag(CACHE_TAGS.METRICS);
   revalidateTag(CACHE_TAGS.SYNC_LOGS);
+  revalidateTag(CACHE_TAGS.PRODUCTS);
 
   const results = data?.results ?? [];
   const first = results[0];
