@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, TableProperties, BarChart3, CalendarDays, UserPlus, Building2, History, DollarSign, ClipboardList } from "lucide-react";
+import { LayoutDashboard, TableProperties, BarChart3, CalendarDays, UserPlus, Building2, History, DollarSign, ClipboardList, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -51,6 +51,11 @@ const navSections = [
   {
     label: "Gestão",
     items: [
+      {
+        title: "Pautas (Gestão)",
+        href: "/dashboard/briefings",
+        icon: ScrollText,
+      },
       {
         title: "Gerenciar Creators",
         href: "/dashboard/creators/list",
