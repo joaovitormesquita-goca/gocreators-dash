@@ -16,7 +16,7 @@ import { BriefingAllocationForm } from "@/components/briefing-allocation-form";
 import {
   getBriefingDetail,
   getAllocatableCreators,
-} from "@/app/dashboard/briefings/actions";
+} from "@/app/dashboard/alocacao/actions";
 import type {
   BriefingAssignmentWithCreator,
   BriefingWithStatus,

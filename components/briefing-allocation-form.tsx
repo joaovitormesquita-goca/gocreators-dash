@@ -15,7 +15,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { assignCreatorsToBriefing } from "@/app/dashboard/briefings/actions";
+import { assignCreatorsToBriefing } from "@/app/dashboard/alocacao/actions";
 
 type CreatorOption = { creatorId: number; creatorName: string };
 

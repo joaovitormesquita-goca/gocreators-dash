@@ -52,8 +52,8 @@ const navSections = [
     label: "Gestão",
     items: [
       {
-        title: "Pautas (Gestão)",
-        href: "/dashboard/briefings",
+        title: "Alocação de Pautas",
+        href: "/dashboard/alocacao",
         icon: ScrollText,
       },
       {

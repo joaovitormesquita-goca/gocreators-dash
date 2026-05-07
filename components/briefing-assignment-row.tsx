@@ -15,7 +15,7 @@ import { BriefingAssignmentBadge } from "@/components/briefing-status-badge";
 import {
   updateAssignmentStatus,
   removeAssignment,
-} from "@/app/dashboard/briefings/actions";
+} from "@/app/dashboard/alocacao/actions";
 import {
   BRIEFING_STATUSES,
   type BriefingAssignmentWithCreator,
