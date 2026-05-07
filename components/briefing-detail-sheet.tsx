@@ -100,7 +100,9 @@ export function BriefingDetailSheet({
           <div className="mt-6 space-y-6">
             <DetailSection label="Take inicial" value={data.briefing.take_inicial} />
             <DetailSection label="Fala inicial" value={data.briefing.fala_inicial} />
-            <DetailSection label="Conceito" value={data.briefing.conceito} />
+            <DetailSection label="Headline" value={data.briefing.headline} />
+            <DetailSection label="Construção" value={data.briefing.construcao} />
+            <DetailSection label="Tempo de Vídeo" value={data.briefing.tempo_video} />
             <DetailSection
               label="Produtos"
               value={data.briefing.produtos.join(", ") || null}
