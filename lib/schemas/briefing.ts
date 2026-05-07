@@ -29,7 +29,9 @@ export type Briefing = {
   ref_url: string | null;
   take_inicial: string | null;
   fala_inicial: string | null;
-  conceito: string | null;
+  headline: string | null;
+  construcao: string | null;
+  tempo_video: string | null;
   produtos: string[];
   source: "docs" | "native";
   source_doc_id: string | null;
@@ -62,6 +64,8 @@ export type BriefingAssignment = {
 export type BriefingAssignmentWithCreator = BriefingAssignment & {
   creator_name: string;
 };
+
+// ============ Allocation schemas (existing) ============
 
 export const assignCreatorsSchema = z.object({
   briefingId: z.number().int().positive(),
@@ -97,3 +101,39 @@ export const removeAssignmentSchema = z.object({
   assignmentId: z.number().int().positive(),
 });
 export type RemoveAssignmentInput = z.infer<typeof removeAssignmentSchema>;
+
+// ============ Briefing CRUD schemas (NEW) ============
+
+const optionalUrl = z
+  .string()
+  .url("URL inválida")
+  .or(z.literal(""))
+  .nullable()
+  .optional()
+  .transform((v) => (v === "" ? null : v));
+
+export const briefingFormSchema = z.object({
+  brand_id: z.number().int().positive("Marca obrigatória"),
+  briefing_number: z.number().int().positive("Número deve ser positivo"),
+  semana: z.number().int().min(1).max(53).nullable().optional(),
+  mes: z.number().int().min(1).max(12).nullable().optional(),
+  ano: z.number().int().min(2020).max(2050).nullable().optional(),
+  ref_url: optionalUrl,
+  take_inicial: z.string().max(2000).nullable().optional(),
+  fala_inicial: z.string().max(2000).nullable().optional(),
+  headline: z.string().max(500).nullable().optional(),
+  construcao: z.string().max(5000).nullable().optional(),
+  tempo_video: z.string().max(100).nullable().optional(),
+  produtos: z.array(z.string().max(100)).max(20).default([]),
+});
+export type BriefingFormInput = z.infer<typeof briefingFormSchema>;
+
+export const updateBriefingSchema = briefingFormSchema.extend({
+  id: z.number().int().positive(),
+});
+export type UpdateBriefingInput = z.infer<typeof updateBriefingSchema>;
+
+export const deleteBriefingSchema = z.object({
+  id: z.number().int().positive(),
+});
+export type DeleteBriefingInput = z.infer<typeof deleteBriefingSchema>;
