@@ -100,7 +100,9 @@ function syncBriefingsToGocreators() {
  *     ref_url: string | null,
  *     take_inicial: string | null,
  *     fala_inicial: string | null,
- *     conceito: string | null,
+ *     headline: string | null,
+ *     construcao: string | null,      // antes era 'conceito'
+ *     tempo_video: string | null,
  *     produtos: string[]              // [] if none
  *   }
  */
