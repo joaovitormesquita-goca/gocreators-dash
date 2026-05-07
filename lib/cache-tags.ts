@@ -4,6 +4,7 @@ export const CACHE_TAGS = {
   COSTS: "costs",
   PRODUCTS: "products",
   SYNC_LOGS: "sync-logs",
+  BRIEFINGS: "briefings",
 } as const;
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
