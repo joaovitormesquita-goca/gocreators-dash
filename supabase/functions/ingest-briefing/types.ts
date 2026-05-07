@@ -12,7 +12,9 @@ export type IncomingBriefing = {
   ref_url?: string | null;
   take_inicial?: string | null;
   fala_inicial?: string | null;
-  conceito?: string | null;
+  headline?: string | null;
+  construcao?: string | null;
+  tempo_video?: string | null;
   produtos?: string[] | null;
 };
 
