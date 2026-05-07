@@ -115,6 +115,9 @@ async function main() {
     ref_url: string | null;
     take_inicial: string | null;
     fala_inicial: string | null;
+    headline: string | null;
+    construcao: string | null;
+    tempo_video: string | null;
     produtos: string[];
   };
   const briefingByNumber = new Map<number, Briefing>();
@@ -129,6 +132,9 @@ async function main() {
       ref_url: row["Ref"]?.trim() || null,
       take_inicial: row["Take inicial"]?.trim() || null,
       fala_inicial: row["Fala inicial"]?.trim() || null,
+      headline: row["Headline"]?.trim() || null,
+      construcao: (row["Construção"] ?? row["Construcao"] ?? row["Conceito"])?.trim() || null,
+      tempo_video: (row["Tempo de Vídeo"] ?? row["Tempo de Video"] ?? row["Tempo"])?.trim() || null,
       produtos: row["Produto"]
         ? [row["Produto"].trim()].filter(Boolean)
         : [],
@@ -185,7 +191,9 @@ async function main() {
       ref_url: b.ref_url,
       take_inicial: b.take_inicial,
       fala_inicial: b.fala_inicial,
-      conceito: null,
+      headline: b.headline,
+      construcao: b.construcao,
+      tempo_video: b.tempo_video,
       produtos: b.produtos,
       source: "docs" as const,
       source_doc_id: "backfill",
